@@ -101,4 +101,3 @@ window.addEventListener('load', () => {
             () => setOption('skritterTLD', input.getAttribute('value')));
     });
 });
-

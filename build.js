@@ -49,23 +49,43 @@ async function build() {
     cleanDist();
     copyStaticAssets();
 
-    // Service worker
+    // Service worker (background worker)
     await esbuild.build({
-        entryPoints: ['background.js'],
+        entryPoints: ['src/background.js'],
         bundle: true,
         outfile: 'dist/background.js',
         format: 'esm',
         target: 'chrome110',
     });
 
-    // Content script
+    // Content script for popup
     await esbuild.build({
-        entryPoints: ['content.js'],
+        entryPoints: ['src/content.js'],
         bundle: true,
         outfile: 'dist/content.js',
         format: 'iife',
         target: 'chrome110',
     });
+
+    // Content script for word list
+    await esbuild.build({
+        entryPoints: ['src/wordlist.js'],
+        bundle: true,
+        outfile: 'dist/wordlist.js',
+        format: 'iife',
+        target: 'chrome110',
+    });
+
+    const sharedFiles = ['config.js', 'options.js', 'zhuyin.js'];
+    for (const file of sharedFiles) {
+      await esbuild.build({
+          entryPoints: [`src/shared/${file}`],
+          bundle: false,
+          outdir: 'dist/js',
+          format: 'esm',
+          target: 'chrome110',
+      });
+    }
 
     console.log('Build complete, outputted to ./dist/');
 }

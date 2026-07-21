@@ -49,7 +49,7 @@
 'use strict';
 
 import { ZhongwenDictionary } from './dict.js';
-import './js/config.js';
+import './shared/config.js';
 
 let dict;
 
@@ -399,4 +399,3 @@ chrome.runtime.onMessage.addListener(function (message) {
         });
     }
 });
-
