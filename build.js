@@ -51,38 +51,28 @@ async function build() {
 
     // Service worker (background worker)
     await esbuild.build({
-        entryPoints: ['src/background.js'],
+        entryPoints: ['src/background.ts'],
         bundle: true,
         outfile: 'dist/background.js',
         format: 'esm',
         target: 'chrome110',
     });
 
-    // Content script for popup
-    await esbuild.build({
-        entryPoints: ['src/content.js'],
-        bundle: true,
-        outfile: 'dist/content.js',
-        format: 'iife',
-        target: 'chrome110',
-    });
+    const scripts = {
+      // Content script for popup
+      'src/content.ts': 'dist/content.js',
+      // Word list script
+      'src/wordlist.ts': 'dist/wordlist.js',
+      // Options page
+      'src/options.ts': 'dist/options.js',
+    };
 
-    // Content script for word list
-    await esbuild.build({
-        entryPoints: ['src/wordlist.js'],
-        bundle: true,
-        outfile: 'dist/wordlist.js',
-        format: 'iife',
-        target: 'chrome110',
-    });
-
-    const sharedFiles = ['config.js', 'options.js', 'zhuyin.js'];
-    for (const file of sharedFiles) {
+    for (const [src, outfile] of Object.entries(scripts)) {
       await esbuild.build({
-          entryPoints: [`src/shared/${file}`],
-          bundle: false,
-          outdir: 'dist/js',
-          format: 'esm',
+          entryPoints: [src],
+          bundle: true,
+          outfile: outfile,
+          format: 'iife',
           target: 'chrome110',
       });
     }

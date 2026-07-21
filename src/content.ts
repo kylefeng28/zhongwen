@@ -44,74 +44,74 @@
 
  */
 
-/* global globalThis */
+import { defaultConfig } from './shared/config';
+import { numericPinyin2Zhuyin } from './shared/zhuyin';
+import type { ZhongwenConfig, SearchResult, SelectionEnd } from './shared/types';
 
-'use strict';
+let config: ZhongwenConfig = { ...defaultConfig };
 
-let config = globalThis.defaultConfig;
-
-chrome.storage.local.get(null, storedConfig => {
+chrome.storage.local.get(null, (storedConfig: Record<string, unknown>) => {
     if (storedConfig) {
-        Object.entries(storedConfig).forEach(e => config[e[0]] = e[1]);
+        Object.entries(storedConfig).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1]);
     }
 });
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
+chrome.storage.onChanged.addListener((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
 
     if (areaName !== 'local') return;
 
     // format: {"background":{"newValue":"lightblue","oldValue":"blue"}, "toneColors":{"newValue":false,"oldValue":true}}
-    Object.entries(changes).forEach(e => config[e[0]] = e[1].newValue);
+    Object.entries(changes).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1].newValue);
 });
 
-let savedTarget;
+let savedTarget: EventTarget | null = null;
 
-let savedRangeNode;
+let savedRangeNode: Text | null = null;
 
-let savedRangeOffset;
+let savedRangeOffset: number = 0;
 
-let selText;
+let selText: string | null = null;
 
-let clientX;
+let clientX: number = 0;
 
-let clientY;
+let clientY: number = 0;
 
-let selStartDelta;
+let selStartDelta: number = 0;
 
-let selStartIncrement;
+let selStartIncrement: number = 0;
 
-let popX = 0;
+let popX: number = 0;
 
-let popY = 0;
+let popY: number = 0;
 
-let timer;
+let timer: ReturnType<typeof setTimeout> | null = null;
 
-let altView = 0;
+let altView: number = 0;
 
-let savedSearchResults = [];
+let savedSearchResults: string[][] & { grammar?: SearchResult['grammar']; vocab?: SearchResult['vocab'] } = [];
 
-let savedSelStartOffset = 0;
+let savedSelStartOffset: number = 0;
 
-let savedSelEndList = [];
+let savedSelEndList: SelectionEnd[] = [];
 
-function enableTab() {
+function enableTab(): void {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('keydown', onKeyDown);
 }
 
-function disableTab() {
+function disableTab(): void {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('keydown', onKeyDown);
 
     let popup = document.getElementById('zhongwen-window');
     if (popup) {
-        popup.parentNode.removeChild(popup);
+        popup.parentNode!.removeChild(popup);
     }
 
     clearHighlight();
 }
 
-function onKeyDown(keyDown) {
+function onKeyDown(keyDown: KeyboardEvent): void {
 
     if (keyDown.ctrlKey || keyDown.metaKey) {
         return;
@@ -157,9 +157,9 @@ function onKeyDown(keyDown) {
                 if (ret === 0) {
                     break;
                 } else if (ret === 2) {
-                    savedRangeNode = findPreviousTextNode(savedRangeNode.parentNode, savedRangeNode);
+                    savedRangeNode = findPreviousTextNode(savedRangeNode!.parentNode, savedRangeNode) as Text | null;
                     savedRangeOffset = 0;
-                    offset = savedRangeNode.data.length;
+                    offset = savedRangeNode!.data.length;
                 }
             }
         }
@@ -167,7 +167,7 @@ function onKeyDown(keyDown) {
 
         case 71: // 'g'
             if (config.grammar && savedSearchResults.grammar) {
-                let sel = encodeURIComponent(window.getSelection().toString());
+                let sel = encodeURIComponent(window.getSelection()!.toString());
 
                 // https://resources.allsetlearning.com/chinese/grammar/%E4%B8%AA
                 let allset = 'https://resources.allsetlearning.com/chinese/grammar/' + sel;
@@ -190,7 +190,7 @@ function onKeyDown(keyDown) {
                 if (ret === 0) {
                     break;
                 } else if (ret === 2) {
-                    savedRangeNode = findNextTextNode(savedRangeNode.parentNode, savedRangeNode);
+                    savedRangeNode = findNextTextNode(savedRangeNode!.parentNode, savedRangeNode) as Text | null;
                     savedRangeOffset = 0;
                     selStartDelta = 0;
                     selStartIncrement = 0;
@@ -200,7 +200,7 @@ function onKeyDown(keyDown) {
 
         case 82: // 'r'
         {
-            let entries = [];
+            let entries: Array<{ simplified: string; traditional: string; pinyin: string; definition: string }> = [];
             for (let j = 0; j < savedSearchResults.length; j++) {
                 let entry = {
                     simplified: savedSearchResults[j][0],
@@ -248,7 +248,7 @@ function onKeyDown(keyDown) {
         case 84: // 't'
             {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 // https://tatoeba.org/eng/sentences/search?from=cmn&to=eng&query=%E8%BF%9B%E8%A1%8C
                 let tatoeba = 'https://tatoeba.org/eng/sentences/search?from=cmn&to=eng&query=' + sel;
@@ -263,7 +263,7 @@ function onKeyDown(keyDown) {
 
         case 86: // 'v'
             if (config.vocab && savedSearchResults.vocab) {
-                let sel = encodeURIComponent(window.getSelection().toString());
+                let sel = encodeURIComponent(window.getSelection()!.toString());
 
                 // https://resources.allsetlearning.com/chinese/vocabulary/%E4%B8%AA
                 let allset = 'https://resources.allsetlearning.com/chinese/vocabulary/' + sel;
@@ -292,7 +292,7 @@ function onKeyDown(keyDown) {
             if (keyDown.altKey) {
 
                 // use the simplified character for linedict lookup
-                let simp = savedSearchResults[0][0];
+                let simp: string = savedSearchResults[0][0];
 
                 // https://english.dict.naver.com/english-chinese-dictionary/#/search?query=%E8%AF%8D%E5%85%B8
                 let linedict = 'https://english.dict.naver.com/english-chinese-dictionary/#/search?query=' +
@@ -309,10 +309,10 @@ function onKeyDown(keyDown) {
         case 50: // '2'
             if (keyDown.altKey) {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 // https://forvo.com/search/%E4%B8%AD%E6%96%87/zh/
-                var forvo = 'https://forvo.com/search/' + sel + '/zh/';
+                let forvo = 'https://forvo.com/search/' + sel + '/zh/';
 
                 chrome.runtime.sendMessage({
                     type: 'open',
@@ -325,7 +325,7 @@ function onKeyDown(keyDown) {
         case 51: // '3'
             if (keyDown.altKey) {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 // https://dict.cn/%E7%BF%BB%E8%AF%91
                 let dictcn = 'https://dict.cn/' + sel;
@@ -341,7 +341,7 @@ function onKeyDown(keyDown) {
         case 52: // '4'
             if (keyDown.altKey) {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 // https://www.iciba.com/%E4%B8%AD%E9%A4%90
                 let iciba = 'https://www.iciba.com/' + sel;
@@ -357,7 +357,7 @@ function onKeyDown(keyDown) {
         case 53: // '5'
             if (keyDown.altKey) {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 // https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E4%B8%AD%E6%96%87
                 let mdbg = 'https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=' + sel;
@@ -373,7 +373,7 @@ function onKeyDown(keyDown) {
         case 54: // '6'
             if (keyDown.altKey) {
                 let sel = encodeURIComponent(
-                    window.getSelection().toString());
+                    window.getSelection()!.toString());
 
                 let reverso = 'https://context.reverso.net/translation/chinese-english/' + sel;
 
@@ -389,7 +389,7 @@ function onKeyDown(keyDown) {
             if (keyDown.altKey) {
 
                 // use the traditional character for moedict lookup
-                let trad = savedSearchResults[0][1];
+                let trad: string = savedSearchResults[0][1];
 
                 // https://www.moedict.tw/~%E4%B8%AD%E6%96%87
                 let moedict = 'https://www.moedict.tw/~' + encodeURIComponent(trad);
@@ -407,20 +407,20 @@ function onKeyDown(keyDown) {
     }
 }
 
-function onMouseMove(mouseMove) {
-    if (mouseMove.target.nodeName === 'TEXTAREA' || mouseMove.target.nodeName === 'INPUT'
-        || mouseMove.target.nodeName === 'DIV') {
+function onMouseMove(mouseMove: MouseEvent): void {
+    if ((mouseMove.target as HTMLElement).nodeName === 'TEXTAREA' || (mouseMove.target as HTMLElement).nodeName === 'INPUT'
+        || (mouseMove.target as HTMLElement).nodeName === 'DIV') {
 
         let div = document.getElementById('zhongwenDiv');
 
         if (mouseMove.altKey) {
 
-            if (!div && (mouseMove.target.nodeName === 'TEXTAREA' || mouseMove.target.nodeName === 'INPUT')) {
+            if (!div && ((mouseMove.target as HTMLElement).nodeName === 'TEXTAREA' || (mouseMove.target as HTMLElement).nodeName === 'INPUT')) {
 
-                div = makeDiv(mouseMove.target);
+                div = makeDiv(mouseMove.target as HTMLInputElement | HTMLTextAreaElement);
                 document.body.appendChild(div);
-                div.scrollTop = mouseMove.target.scrollTop;
-                div.scrollLeft = mouseMove.target.scrollLeft;
+                div.scrollTop = (mouseMove.target as HTMLInputElement | HTMLTextAreaElement).scrollTop;
+                div.scrollLeft = (mouseMove.target as HTMLInputElement | HTMLTextAreaElement).scrollLeft;
             }
         } else {
             if (div) {
@@ -437,9 +437,9 @@ function onMouseMove(mouseMove) {
     clientX = mouseMove.clientX;
     clientY = mouseMove.clientY;
 
-    let range;
-    let rangeNode;
-    let rangeOffset;
+    let range: Range | CaretPosition | null;
+    let rangeNode: Node | null;
+    let rangeOffset: number;
 
     // Handle Chrome and Firefox
     if (document.caretRangeFromPoint) {
@@ -456,6 +456,8 @@ function onMouseMove(mouseMove) {
         }
         rangeNode = range.offsetNode;
         rangeOffset = range.offset;
+    } else {
+        return;
     }
 
     if (mouseMove.target === savedTarget) {
@@ -469,8 +471,8 @@ function onMouseMove(mouseMove) {
         timer = null;
     }
 
-    if (rangeNode.data && rangeOffset === rangeNode.data.length) {
-        rangeNode = findNextTextNode(rangeNode.parentNode, rangeNode);
+    if ((rangeNode as Text).data && rangeOffset === (rangeNode as Text).data.length) {
+        rangeNode = findNextTextNode(rangeNode!.parentNode, rangeNode);
         rangeOffset = 0;
     }
 
@@ -480,13 +482,13 @@ function onMouseMove(mouseMove) {
     }
 
     savedTarget = mouseMove.target;
-    savedRangeNode = rangeNode;
+    savedRangeNode = rangeNode as Text | null;
     savedRangeOffset = rangeOffset;
 
     selStartDelta = 0;
     selStartIncrement = 1;
 
-    if (rangeNode && rangeNode.data && rangeOffset < rangeNode.data.length) {
+    if (rangeNode && (rangeNode as Text).data && rangeOffset < (rangeNode as Text).data.length) {
         popX = mouseMove.clientX;
         popY = mouseMove.clientY;
         timer = setTimeout(() => triggerSearch(), 50);
@@ -494,19 +496,19 @@ function onMouseMove(mouseMove) {
     }
 
     // Don't close just because we moved from a valid pop-up slightly over to a place with nothing.
-    let dx = popX - mouseMove.clientX;
-    let dy = popY - mouseMove.clientY;
-    let distance = Math.sqrt(dx * dx + dy * dy);
+    let dx: number = popX - mouseMove.clientX;
+    let dy: number = popY - mouseMove.clientY;
+    let distance: number = Math.sqrt(dx * dx + dy * dy);
     if (distance > 4) {
         clearHighlight();
         hidePopup();
     }
 }
 
-function triggerSearch() {
+function triggerSearch(): number {
 
-    let rangeNode = savedRangeNode;
-    let selStartOffset = savedRangeOffset + selStartDelta;
+    let rangeNode: Text | null = savedRangeNode;
+    let selStartOffset: number = savedRangeOffset + selStartDelta;
 
     selStartIncrement = 1;
 
@@ -522,9 +524,9 @@ function triggerSearch() {
         return 2;
     }
 
-    let u = rangeNode.data.charCodeAt(selStartOffset);
+    let u: number = rangeNode.data.charCodeAt(selStartOffset);
 
-    let isChineseCharacter = !isNaN(u) && (
+    let isChineseCharacter: boolean = !isNaN(u) && (
         u === 0x25CB ||
         (0x3400 <= u && u <= 0x9FFF) ||
         (0xF900 <= u && u <= 0xFAFF) ||
@@ -539,7 +541,7 @@ function triggerSearch() {
         return 3;
     }
 
-    let selEndList = [];
+    let selEndList: SelectionEnd[] = [];
     let text = getText(rangeNode, selStartOffset, selEndList, 30 /*maxlength*/);
 
     savedSelStartOffset = selStartOffset;
@@ -555,10 +557,10 @@ function triggerSearch() {
     return 0;
 }
 
-function processSearchResult(result) {
+function processSearchResult(result: SearchResult | null): void {
 
-    let selStartOffset = savedSelStartOffset;
-    let selEndList = savedSelEndList;
+    let selStartOffset: number = savedSelStartOffset;
+    let selEndList: SelectionEnd[] = savedSelEndList;
 
     if (!result) {
         hidePopup();
@@ -569,25 +571,25 @@ function processSearchResult(result) {
     selStartIncrement = result.matchLen;
     selStartDelta = (selStartOffset - savedRangeOffset);
 
-    let rangeNode = savedRangeNode;
+    let rangeNode: Text | null = savedRangeNode;
     // don't try to highlight form elements
-    if (!('form' in savedTarget)) {
-        let doc = rangeNode.ownerDocument;
+    if (!('form' in (savedTarget as Element))) {
+        let doc: Document = rangeNode!.ownerDocument!;
         if (!doc) {
             clearHighlight();
             hidePopup();
             return;
         }
-        highlightMatch(doc, rangeNode, selStartOffset, result.matchLen, selEndList);
+        highlightMatch(doc, rangeNode!, selStartOffset, result.matchLen, selEndList);
     }
 
     showPopup(makeHtml(result, config.toneColors), savedTarget, popX, popY, false);
 }
 
 // modifies selEndList as a side-effect
-function getText(startNode, offset, selEndList, maxLength) {
+function getText(startNode: Text, offset: number, selEndList: SelectionEnd[], maxLength: number): string {
     let text = '';
-    let endIndex;
+    let endIndex: number;
 
     if (startNode.nodeType !== Node.TEXT_NODE) {
         return '';
@@ -600,17 +602,17 @@ function getText(startNode, offset, selEndList, maxLength) {
         offset: endIndex
     });
 
-    let nextNode = startNode;
-    while ((text.length < maxLength) && ((nextNode = findNextTextNode(nextNode.parentNode, nextNode)) !== null)) {
-        text += getTextFromSingleNode(nextNode, selEndList, maxLength - text.length);
+    let nextNode: Node | null = startNode;
+    while ((text.length < maxLength) && ((nextNode = findNextTextNode(nextNode!.parentNode, nextNode)) !== null)) {
+        text += getTextFromSingleNode(nextNode as Text, selEndList, maxLength - text.length);
     }
 
     return text;
 }
 
 // modifies selEndList as a side-effect
-function getTextFromSingleNode(node, selEndList, maxLength) {
-    let endIndex;
+function getTextFromSingleNode(node: Text, selEndList: SelectionEnd[], maxLength: number): string {
+    let endIndex: number;
 
     if (node.nodeName === '#text') {
         endIndex = Math.min(maxLength, node.data.length);
@@ -624,7 +626,7 @@ function getTextFromSingleNode(node, selEndList, maxLength) {
     }
 }
 
-function showPopup(html, elem, x, y, looseWidth) {
+function showPopup(html: string, elem?: EventTarget | null, x?: number, y?: number, looseWidth?: boolean): void {
 
     if (!x || !y) {
         x = y = 0;
@@ -643,22 +645,22 @@ function showPopup(html, elem, x, y, looseWidth) {
     popup.style.maxWidth = (looseWidth ? '' : '600px');
     popup.className = `background-${config.background} tonecolor-${config.toneColorScheme}`;
 
-    $(popup).html(html);
+    popup.innerHTML = html;
 
     if (elem) {
         popup.style.top = '-1000px';
         popup.style.left = '0px';
         popup.style.display = '';
 
-        let pW = popup.offsetWidth;
-        let pH = popup.offsetHeight;
+        let pW: number = popup.offsetWidth;
+        let pH: number = popup.offsetHeight;
 
         if (pW <= 0) {
             pW = 200;
         }
         if (pH <= 0) {
             pH = 0;
-            let j = 0;
+            let j: number = 0;
             while ((j = html.indexOf('<br/>', j)) !== -1) {
                 j += 5;
                 pH += 22;
@@ -677,15 +679,15 @@ function showPopup(html, elem, x, y, looseWidth) {
             x = 0;
             y = 0;
 
-            let p = elem;
+            let p = elem as HTMLElement | null;
             while (p) {
                 x += p.offsetLeft;
                 y += p.offsetTop;
-                p = p.offsetParent;
+                p = p.offsetParent as HTMLElement;
             }
 
-            if (elem.offsetTop > elem.parentNode.clientHeight) {
-                y -= elem.offsetTop;
+            if ((elem as HTMLOptionElement).offsetTop > ((elem as HTMLOptionElement).parentNode as HTMLElement).clientHeight) {
+                y -= (elem as HTMLOptionElement).offsetTop;
             }
 
             if (x + popup.offsetWidth > window.innerWidth) {
@@ -696,7 +698,7 @@ function showPopup(html, elem, x, y, looseWidth) {
                 }
             } else {
                 // use SELECT's width
-                x += elem.parentNode.offsetWidth + 5;
+                x += ((elem as HTMLOptionElement).parentNode as HTMLElement).offsetWidth + 5;
             }
         } else {
             // go left if necessary
@@ -708,11 +710,11 @@ function showPopup(html, elem, x, y, looseWidth) {
             }
 
             // below the mouse
-            let v = 25;
+            let v: number = 25;
 
             // go up if necessary
             if (y + v + pH > window.innerHeight) {
-                let t = y - pH - 30;
+                let t: number = y - pH - 30;
                 if (t >= 0) {
                     y = t;
                 }
@@ -736,7 +738,7 @@ function showPopup(html, elem, x, y, looseWidth) {
     }
 }
 
-function hidePopup() {
+function hidePopup(): void {
     let popup = document.getElementById('zhongwen-window');
     if (popup) {
         popup.style.display = 'none';
@@ -744,10 +746,10 @@ function hidePopup() {
     }
 }
 
-function highlightMatch(doc, rangeStartNode, rangeStartOffset, matchLen, selEndList) {
+function highlightMatch(doc: Document, rangeStartNode: Text, rangeStartOffset: number, matchLen: number, selEndList: SelectionEnd[]): void {
     if (!selEndList || selEndList.length === 0) return;
 
-    let selEnd;
+    let selEnd: SelectionEnd = selEndList[0];
     let offset = rangeStartOffset + matchLen;
 
     for (let i = 0, len = selEndList.length; i < len; i++) {
@@ -758,11 +760,12 @@ function highlightMatch(doc, rangeStartNode, rangeStartOffset, matchLen, selEndL
         offset -= selEnd.offset;
     }
 
-    let range = doc.createRange();
+    let range: Range = doc.createRange();
     range.setStart(rangeStartNode, rangeStartOffset);
     range.setEnd(selEnd.node, offset);
 
-    let sel = window.getSelection();
+    let sel: Selection | null = window.getSelection();
+    if (!sel) return;
     if (!sel.isCollapsed && selText !== sel.toString())
         return;
     sel.empty();
@@ -770,25 +773,26 @@ function highlightMatch(doc, rangeStartNode, rangeStartOffset, matchLen, selEndL
     selText = sel.toString();
 }
 
-function clearHighlight() {
+function clearHighlight(): void {
 
     if (selText === null) {
         return;
     }
 
-    let selection = window.getSelection();
+    let selection: Selection | null = window.getSelection();
+    if (!selection) return;
     if (selection.isCollapsed || selText === selection.toString()) {
         selection.empty();
     }
     selText = null;
 }
 
-function isVisible() {
+function isVisible(): boolean {
     let popup = document.getElementById('zhongwen-window');
-    return popup && popup.style.display !== 'none';
+    return !!(popup && popup.style.display !== 'none');
 }
 
-function getTextForClipboard() {
+function getTextForClipboard(): string {
     let result = '';
     for (let i = 0; i < savedSearchResults.length; i++) {
         result += savedSearchResults[i].slice(0, -1).join('\t');
@@ -797,12 +801,12 @@ function getTextForClipboard() {
     return result;
 }
 
-function makeDiv(input) {
+function makeDiv(input: HTMLInputElement | HTMLTextAreaElement): HTMLDivElement {
     let div = document.createElement('div');
 
     div.id = 'zhongwenDiv';
 
-    let text;
+    let text: string;
     if (input.value) {
         text = input.value;
     } else {
@@ -814,28 +818,27 @@ function makeDiv(input) {
     div.scrollTop = input.scrollTop;
     div.scrollLeft = input.scrollLeft;
     div.style.position = 'absolute';
-    div.style.zIndex = 7000;
-    $(div).offset({
-        top: $(input).offset().top,
-        left: $(input).offset().left
-    });
+    div.style.zIndex = '7000';
+    const rect: DOMRect = input.getBoundingClientRect();
+    div.style.top = (rect.top + window.scrollY) + 'px';
+    div.style.left = (rect.left + window.scrollX) + 'px';
 
     return div;
 }
 
-function findNextTextNode(root, previous) {
+function findNextTextNode(root: Node | null, previous: Node | null): Node | null {
     if (root === null) {
         return null;
     }
-    let nodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_TEXT, null);
-    let node = nodeIterator.nextNode();
+    let nodeIterator: NodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null = nodeIterator.nextNode();
     while (node !== previous) {
         node = nodeIterator.nextNode();
         if (node === null) {
             return findNextTextNode(root.parentNode, previous);
         }
     }
-    let result = nodeIterator.nextNode();
+    let result: Node | null = nodeIterator.nextNode();
     if (result !== null) {
         return result;
     } else {
@@ -843,12 +846,12 @@ function findNextTextNode(root, previous) {
     }
 }
 
-function findPreviousTextNode(root, previous) {
+function findPreviousTextNode(root: Node | null, previous: Node | null): Node | null {
     if (root === null) {
         return null;
     }
-    let nodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_TEXT, null);
-    let node = nodeIterator.nextNode();
+    let nodeIterator: NodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null = nodeIterator.nextNode();
     while (node !== previous) {
         node = nodeIterator.nextNode();
         if (node === null) {
@@ -856,7 +859,7 @@ function findPreviousTextNode(root, previous) {
         }
     }
     nodeIterator.previousNode();
-    let result = nodeIterator.previousNode();
+    let result: Node | null = nodeIterator.previousNode();
     if (result !== null) {
         return result;
     } else {
@@ -864,18 +867,18 @@ function findPreviousTextNode(root, previous) {
     }
 }
 
-function copyToClipboard(data) {
+function copyToClipboard(data: string): void {
     navigator.clipboard.writeText(data).then(() => {
-        showPopup('Copied to clipboard', null, -1, -1);
+        showPopup('Copied to clipboard');
     });
 }
 
-function makeHtml(result, showToneColors) {
+function makeHtml(result: SearchResult, showToneColors: boolean): string {
 
-    let entry;
+    let entry: RegExpMatchArray | null;
     let html = '';
-    let texts = [];
-    let hanziClass;
+    let texts: string[][] = [];
+    let hanziClass: string;
 
     if (result === null) return '';
 
@@ -887,7 +890,7 @@ function makeHtml(result, showToneColors) {
 
         if (config.simpTrad === 'auto') {
 
-            let word = result.data[i][1];
+            let word: string = result.data[i][1];
 
             hanziClass = 'w-hanzi';
             if (config.fontSize === 'small') {
@@ -914,7 +917,7 @@ function makeHtml(result, showToneColors) {
         if (config.fontSize === 'small') {
             pinyinClass += '-small';
         }
-        let p = pinyinAndZhuyin(entry[3], showToneColors, pinyinClass);
+        let p: [string, string, string] = pinyinAndZhuyin(entry[3], showToneColors, pinyinClass);
         html += p[0];
 
         // Zhuyin
@@ -929,10 +932,10 @@ function makeHtml(result, showToneColors) {
         if (config.fontSize === 'small') {
             defClass += '-small';
         }
-        let translation = entry[4].replace(/\//g, ' ◆ ');
+        let translation: string = entry[4].replace(/\//g, ' ◆ ');
         html += '<br><span class="' + defClass + '">' + translation + '</span><br>';
 
-        let addFinalBr = false;
+        let addFinalBr: boolean = false;
 
         // Grammar
         if (config.grammar && result.grammar && result.grammar.index === i) {
@@ -956,14 +959,14 @@ function makeHtml(result, showToneColors) {
         html += '&hellip;<br/>';
     }
 
-    savedSearchResults = texts;
+    savedSearchResults = texts as string[][] & { grammar?: SearchResult['grammar']; vocab?: SearchResult['vocab'] };
     savedSearchResults.grammar = result.grammar;
     savedSearchResults.vocab = result.vocab;
 
     return html;
 }
 
-let tones = {
+let tones: Record<number, string> = {
     1: '&#772;',
     2: '&#769;',
     3: '&#780;',
@@ -971,7 +974,7 @@ let tones = {
     5: ''
 };
 
-let utones = {
+let utones: Record<number, string> = {
     1: '\u0304',
     2: '\u0301',
     3: '\u030C',
@@ -979,11 +982,11 @@ let utones = {
     5: ''
 };
 
-function parse(s) {
+function parse(s: string): RegExpMatchArray | null {
     return s.match(/([^AEIOU:aeiou]*)([AEIOUaeiou:]+)([^aeiou:]*)([1-5])/);
 }
 
-function tonify(vowels, tone) {
+function tonify(vowels: string, tone: number): [string, string] {
     let html = '';
     let text = '';
 
@@ -991,9 +994,9 @@ function tonify(vowels, tone) {
         html = 'o' + tones[tone] + 'u';
         text = 'o' + utones[tone] + 'u';
     } else {
-        let tonified = false;
+        let tonified: boolean = false;
         for (let i = 0; i < vowels.length; i++) {
-            let c = vowels.charAt(i);
+            let c: string = vowels.charAt(i);
             html += c;
             text += c;
             if (c === 'a' || c === 'e') {
@@ -1013,13 +1016,13 @@ function tonify(vowels, tone) {
     return [html, text];
 }
 
-function pinyinAndZhuyin(syllables, showToneColors, pinyinClass) {
+function pinyinAndZhuyin(syllables: string, showToneColors: boolean, pinyinClass: string): [string, string, string] {
     let text = '';
     let html = '';
     let zhuyin = '';
-    let a = syllables.split(/[\s·]+/);
+    let a: string[] = syllables.split(/[\s·]+/);
     for (let i = 0; i < a.length; i++) {
-        let syllable = a[i];
+        let syllable: string = a[i];
 
         // ',' in pinyin
         if (syllable === ',') {
@@ -1051,29 +1054,29 @@ function pinyinAndZhuyin(syllables, showToneColors, pinyinClass) {
             text += '??';
             continue;
         }
-        let m = parse(syllable);
+        let m: RegExpMatchArray | null = parse(syllable);
         if (showToneColors) {
-            html += '<span class="' + pinyinClass + ' tone' + m[4] + '">';
+            html += '<span class="' + pinyinClass + ' tone' + m![4] + '">';
         } else {
             html += '<span class="' + pinyinClass + '">';
         }
-        let t = tonify(m[2], m[4]);
-        html += m[1] + t[0] + m[3];
+        let t: [string, string] = tonify(m![2], parseInt(m![4], 10));
+        html += m![1] + t[0] + m![3];
         html += '</span>';
-        text += m[1] + t[1] + m[3];
+        text += m![1] + t[1] + m![3];
 
         let zhuyinClass = 'w-zhuyin';
         if (config.fontSize === 'small') {
             zhuyinClass += '-small';
         }
 
-        zhuyin += '<span class="tone' + m[4] + ' ' + zhuyinClass + '">'
-            + globalThis.numericPinyin2Zhuyin(syllable) + '</span>';
+        zhuyin += '<span class="tone' + m![4] + ' ' + zhuyinClass + '">'
+            + numericPinyin2Zhuyin(syllable) + '</span>';
     }
     return [html, text, zhuyin];
 }
 
-let miniHelp = `
+let miniHelp: string = `
     <span style="font-weight: bold;">Zhongwen Chinese-English Dictionary</span><br><br>
     <p>Keyboard shortcuts:<p>
     <table style="margin: 10px;" cellspacing=5 cellpadding=5>
@@ -1110,7 +1113,7 @@ let miniHelp = `
 
 // event listener
 chrome.runtime.onMessage.addListener(
-    function (request) {
+    function (request: { type: string; text?: string; isHelp?: boolean }) {
         switch (request.type) {
             case 'enable':
                 enableTab();
@@ -1120,7 +1123,7 @@ chrome.runtime.onMessage.addListener(
                 break;
             case 'showPopup':
                 if (!request.isHelp || window === window.top) {
-                    showPopup(request.text);
+                    showPopup(request.text!);
                 }
                 break;
             case 'showHelp':
@@ -1128,5 +1131,4 @@ chrome.runtime.onMessage.addListener(
                 break;
             default:
         }
-    }
-);
+    });

@@ -4,11 +4,12 @@
  https://chrome.google.com/extensions/detail/kkmlkkjojmombglmlpbpapmhcaljjkde
  */
 
-/* global globalThis */
+// @ts-nocheck
 
-'use strict';
+import { defaultConfig } from './shared/config';
+import type { ZhongwenConfig } from './shared/types';
 
-let config = globalThis.defaultConfig;
+let config: ZhongwenConfig = { ...defaultConfig };
 
 chrome.storage.local.get(null, storedConfig => {
     if (storedConfig) {
@@ -43,11 +44,11 @@ function loadVals() {
     document.querySelector(`input[name="skritterTLD"][value="${config.skritterTLD}"]`).checked = true;
 }
 
-function setPopupColor(popupColor) {
+function setPopupColor(popupColor: string) {
     setOption('background', popupColor);
 }
 
-function setToneColorScheme(toneColorScheme) {
+function setToneColorScheme(toneColorScheme: string) {
     if (toneColorScheme === 'none') {
         setOption('toneColors', false);
     } else {
@@ -56,7 +57,7 @@ function setToneColorScheme(toneColorScheme) {
     }
 }
 
-function setOption(option, value) {
+function setOption(option: string, value: string) {
     chrome.storage.local.set({[option]: value});
 }
 

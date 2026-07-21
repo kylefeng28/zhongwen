@@ -44,16 +44,13 @@
 
  */
 
-/* global globalThis */
+import { ZhongwenDictionary } from './dict';
+import { defaultConfig } from './shared/config';
+import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
 
-'use strict';
+let dict: ZhongwenDictionary | undefined;
 
-import { ZhongwenDictionary } from './dict.js';
-import './shared/config.js';
-
-let dict;
-
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((): void => {
 
     chrome.contextMenus.create(
         {
@@ -82,23 +79,23 @@ chrome.contextMenus.onClicked.addListener(wordlistMenuItemListener);
 
 chrome.contextMenus.onClicked.addListener(helpMenuItemListener);
 
-function wordlistMenuItemListener({menuItemId}) {
+function wordlistMenuItemListener({menuItemId}: chrome.contextMenus.OnClickData): void {
 
     chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
         if (menuItemId === 'wordlistMenuItem') {
             let url = '/wordlist.html';
             let tabID = tabIDs['wordlist'];
             if (tabID) {
-                chrome.tabs.get(tabID, function (tab) {
+                chrome.tabs.get(tabID, function (tab: chrome.tabs.Tab) {
                     if (!chrome.runtime.lastError && tab && tab.url && (tab.url.endsWith('wordlist.html'))) {
-                        chrome.tabs.update(tabID, {
+                        chrome.tabs.update(tabID!, {
                             active: true
                         });
                     } else {
                         chrome.tabs.create({
                             url: url
-                        }, function (tab) {
-                            tabIDs['wordlist'] = tab.id;
+                        }, function (tab: chrome.tabs.Tab) {
+                            tabIDs['wordlist'] = tab.id!;
                             chrome.storage.session.set({tabIDs});
                         });
                     }
@@ -106,8 +103,8 @@ function wordlistMenuItemListener({menuItemId}) {
             } else {
                 chrome.tabs.create(
                     {url: url},
-                    function (tab) {
-                        tabIDs['wordlist'] = tab.id;
+                    function (tab: chrome.tabs.Tab) {
+                        tabIDs['wordlist'] = tab.id!;
                         chrome.storage.session.set({tabIDs});
                     }
                 );
@@ -116,23 +113,23 @@ function wordlistMenuItemListener({menuItemId}) {
     });
 }
 
-function helpMenuItemListener({menuItemId}) {
+function helpMenuItemListener({menuItemId}: chrome.contextMenus.OnClickData): void {
 
     chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
         if (menuItemId === 'helpMenuItem') {
             let url = '/help.html';
             let tabID = tabIDs['help'];
             if (tabID) {
-                chrome.tabs.get(tabID, function (tab) {
-                    if (!chrome.runtime.lastError && tab && (tab.url.endsWith('help.html'))) {
-                        chrome.tabs.update(tabID, {
+                chrome.tabs.get(tabID, function (tab: chrome.tabs.Tab) {
+                    if (!chrome.runtime.lastError && tab && (tab.url!.endsWith('help.html'))) {
+                        chrome.tabs.update(tabID!, {
                             active: true
                         });
                     } else {
                         chrome.tabs.create({
                             url: url
-                        }, function (tab) {
-                            tabIDs['help'] = tab.id;
+                        }, function (tab: chrome.tabs.Tab) {
+                            tabIDs['help'] = tab.id!;
                             chrome.storage.session.set({tabIDs});
                         });
                     }
@@ -140,8 +137,8 @@ function helpMenuItemListener({menuItemId}) {
             } else {
                 chrome.tabs.create(
                     {url: url},
-                    function (tab) {
-                        tabIDs['help'] = tab.id;
+                    function (tab: chrome.tabs.Tab) {
+                        tabIDs['help'] = tab.id!;
                         chrome.storage.session.set({tabIDs});
                     }
                 );
@@ -152,13 +149,13 @@ function helpMenuItemListener({menuItemId}) {
 
 chrome.action.onClicked.addListener(activateExtensionToggle);
 
-function activateExtensionToggle(currentTab) {
-    chrome.storage.local.get('isActive', ({isActive}) => {
-        isActive ? deactivateExtension() : activateExtension(currentTab.id);
+function activateExtensionToggle(currentTab: chrome.tabs.Tab): void {
+    chrome.storage.local.get('isActive', ({isActive}: { isActive?: boolean }) => {
+        isActive ? deactivateExtension() : activateExtension(currentTab.id!);
     });
 }
 
-function activateExtension(tabId) {
+function activateExtension(tabId: number): void {
 
     chrome.storage.local.set({isActive: true});
 
@@ -169,7 +166,7 @@ function activateExtension(tabId) {
     showHelpMenu(tabId);
 }
 
-function enableTab(tabId) {
+function enableTab(tabId: number): void {
     chrome.tabs.sendMessage(tabId, {
         'type': 'enable'
     }, () => {
@@ -179,7 +176,7 @@ function enableTab(tabId) {
     });
 }
 
-function showActiveBadge() {
+function showActiveBadge(): void {
     chrome.action.setBadgeBackgroundColor({
         'color': [255, 0, 0, 255]
     });
@@ -189,7 +186,7 @@ function showActiveBadge() {
     });
 }
 
-function showHelpMenu(tabId) {
+function showHelpMenu(tabId: number): void {
     chrome.tabs.sendMessage(tabId, {
         'type': 'showHelp'
     }, () => {
@@ -199,7 +196,7 @@ function showHelpMenu(tabId) {
     });
 }
 
-function deactivateExtension() {
+function deactivateExtension(): void {
 
     chrome.storage.local.set({isActive: false});
 
@@ -210,7 +207,7 @@ function deactivateExtension() {
     disableAllTabs();
 }
 
-function showInactiveBadge() {
+function showInactiveBadge(): void {
     chrome.action.setBadgeBackgroundColor({
         'color': [0, 0, 0, 0]
     });
@@ -220,14 +217,14 @@ function showInactiveBadge() {
     });
 }
 
-function disableAllTabs() {
+function disableAllTabs(): void {
     chrome.windows.getAll(
         { 'populate': true },
-        function (windows) {
+        function (windows: chrome.windows.Window[]) {
             for (let i = 0; i < windows.length; ++i) {
-                let tabs = windows[i].tabs;
+                let tabs = windows[i].tabs!;
                 for (let j = 0; j < tabs.length; ++j) {
-                    chrome.tabs.sendMessage(tabs[j].id, {
+                    chrome.tabs.sendMessage(tabs[j].id!, {
                         'type': 'disable'
                     }, () => {
                         if (chrome.runtime.lastError) {
@@ -240,19 +237,25 @@ function disableAllTabs() {
     );
 }
 
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (
+    message: { type: string; text?: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: SearchResult | undefined) => void
+): boolean | undefined {
 
     if (message.type === 'search') {
 
-        search(message.text).then(response => {
-            sendResponse(response);
+        search(message.text!).then(response => {
+            sendResponse(response ?? undefined);
         });
 
         return true;
     }
+
+    return undefined;
 });
 
-function search(text) {
+function search(text: string): Promise<SearchResult | null> {
 
     if (!dict) {
         return loadDictionary().then(d => {
@@ -269,12 +272,12 @@ function search(text) {
     }
 }
 
-async function loadDictionary() {
+async function loadDictionary(): Promise<ZhongwenDictionary> {
     let [wordDict, wordIndex, grammarKeywords, vocabKeywords] = await loadDictData();
     return new ZhongwenDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
 }
 
-async function loadDictData() {
+async function loadDictData(): Promise<[string, string, Record<string, boolean>, Record<string, boolean>]> {
     let wordDict = fetch(chrome.runtime.getURL(
         "data/cedict_ts.u8")).then(r => r.text());
     let wordIndex = fetch(chrome.runtime.getURL(
@@ -287,13 +290,13 @@ async function loadDictData() {
     return Promise.all([wordDict, wordIndex, grammarKeywords, vocabKeywords]);
 }
 
-function lookup(dictionary, text) {
+function lookup(dictionary: ZhongwenDictionary, text: string): SearchResult | null {
 
     let entry = dictionary.wordSearch(text);
 
     if (entry) {
         for (let i = 0; i < entry.data.length; i++) {
-            let word = entry.data[i][1];
+            let word: string = entry.data[i][1];
             if (dictionary.hasGrammarKeyword(word) && (entry.matchLen === word.length)) {
                 // the final index should be the last one with the maximum length
                 entry.grammar = { keyword: word, index: i };
@@ -308,7 +311,7 @@ function lookup(dictionary, text) {
     return entry;
 }
 
-chrome.tabs.onActivated.addListener(activeInfo => {
+chrome.tabs.onActivated.addListener((activeInfo: chrome.tabs.TabActiveInfo): void => {
 
     chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
         if (activeInfo.tabId === tabIDs['wordlist']) {
@@ -319,7 +322,7 @@ chrome.tabs.onActivated.addListener(activeInfo => {
     });
 });
 
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo) {
+chrome.tabs.onUpdated.addListener(function (tabId: number, changeInfo: chrome.tabs.TabChangeInfo): void {
 
     chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
         if (changeInfo.status === 'complete' && tabId !== tabIDs['help'] && tabId !== tabIDs['wordlist']) {
@@ -329,9 +332,9 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo) {
 });
 
 
-function enableTabIfActive(tabId) {
+function enableTabIfActive(tabId: number): void {
 
-    chrome.storage.local.get('isActive', ({isActive}) => {
+    chrome.storage.local.get('isActive', ({isActive}: { isActive?: boolean }) => {
         if (isActive) {
             enableTab(tabId);
             showActiveBadge();
@@ -339,54 +342,58 @@ function enableTabIfActive(tabId) {
     });
 }
 
-chrome.runtime.onMessage.addListener(function (message) {
+chrome.runtime.onMessage.addListener(function (
+    message: { type: string; url?: string; tabType?: string }
+): void {
 
     if (message.type === 'open') {
         chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
-            let tabID = tabIDs[message.tabType];
+            let tabID = tabIDs[message.tabType!];
             if (tabID) {
                 chrome.tabs.get(tabID, () => {
                     if (!chrome.runtime.lastError) {
                         // activate existing tab
-                        chrome.tabs.update(tabID, {active: true, url: message.url});
+                        chrome.tabs.update(tabID!, {active: true, url: message.url});
                     } else {
-                        createTab(message.url, message.tabType);
+                        createTab(message.url!, message.tabType!);
                     }
                 });
             } else {
-                createTab(message.url, message.tabType);
+                createTab(message.url!, message.tabType!);
             }
         });
     }
 });
 
-function createTab(url, tabType) {
+function createTab(url: string, tabType: string): void {
 
     chrome.storage.session.get('tabIDs', ({tabIDs = {}}) => {
-        chrome.tabs.create({url}, tab => {
-            tabIDs[tabType] = tab.id;
+        chrome.tabs.create({url}, (tab: chrome.tabs.Tab) => {
+            tabIDs[tabType] = tab.id!;
             chrome.storage.session.set({tabIDs});
         });
     });
 }
 
-chrome.runtime.onMessage.addListener(function (message) {
+chrome.runtime.onMessage.addListener(function (
+    message: { type: string; entries?: Array<{ simplified: string; traditional: string; pinyin: string; definition: string }> }
+): void {
 
     if (message.type === 'add') {
-        chrome.storage.local.get(['wordList', 'saveToWordList'], data => {
+        chrome.storage.local.get(['wordList', 'saveToWordList'], (data: { wordList?: WordListEntry[]; saveToWordList?: string }) => {
 
-            let wordList = data.wordList || [];
+            let wordList: WordListEntry[] = data.wordList || [];
 
-            let saveToWordList = data.saveToWordList || globalThis.defaultConfig.saveToWordList;
+            let saveToWordList: string = data.saveToWordList || defaultConfig.saveToWordList;
 
-            for (let i in message.entries) {
+            for (let i in message.entries!) {
 
-                let entry = {};
+                let entry: WordListEntry = {} as WordListEntry;
                 entry.timestamp = Date.now();
-                entry.simplified = message.entries[i].simplified;
-                entry.traditional = message.entries[i].traditional;
-                entry.pinyin = message.entries[i].pinyin;
-                entry.definition = message.entries[i].definition;
+                entry.simplified = message.entries![i].simplified;
+                entry.traditional = message.entries![i].traditional;
+                entry.pinyin = message.entries![i].pinyin;
+                entry.definition = message.entries![i].definition;
 
                 wordList.push(entry);
 
