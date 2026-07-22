@@ -144,8 +144,14 @@ function onKeyDown(keyDown) {
             triggerSearch();
             break;
 
-        case 67: // 'c'
-            copyToClipboard(getTextForClipboard());
+        case 67: // 'c' or 'C'
+            if (keyDown.shiftKey) {
+                // 'C' — copy all entries
+                copyToClipboard(getTextForClipboard(false));
+            } else {
+                // 'c' — copy first entry only
+                copyToClipboard(getTextForClipboard(true));
+            }
             break;
 
         case 66: // 'b'
@@ -788,10 +794,31 @@ function isVisible() {
     return popup && popup.style.display !== 'none';
 }
 
-function getTextForClipboard() {
+/**
+ * Formats a single search result entry using the configured clipboard format string.
+ * Placeholders: {simplified}, {traditional}, {pinyin}, {definition}
+ */
+function formatEntry(entry, format) {
+    return format
+        .replace(/\\t/g, '\t')
+        .replace(/\\n/g, '\n')
+        .replace(/\{simplified\}/g, entry[0] || '')
+        .replace(/\{traditional\}/g, entry[1] || '')
+        .replace(/\{pinyin\}/g, entry[2] || '')
+        .replace(/\{definition\}/g, entry[3] || '');
+}
+
+function getTextForClipboard(firstOnly) {
+    if (savedSearchResults.length === 0) return '';
+
+    console.log(config)
+    console.log(config.clipboardFormat)
+    const format = config.clipboardFormat;
+    const entries = firstOnly ? [savedSearchResults[0]] : savedSearchResults;
+
     let result = '';
-    for (let i = 0; i < savedSearchResults.length; i++) {
-        result += savedSearchResults[i].slice(0, -1).join('\t');
+    for (let i = 0; i < entries.length; i++) {
+        result += formatEntry(entries[i], format);
         result += '\n';
     }
     return result;
