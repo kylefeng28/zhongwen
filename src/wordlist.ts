@@ -4,17 +4,17 @@
  https://chrome.google.com/extensions/detail/kkmlkkjojmombglmlpbpapmhcaljjkde
  */
 
-/* global globalThis */
-
-'use strict';
+import { defaultConfig } from './shared/config';
+import type { WordListEntry } from './shared/types';
+import { accentedPinyin2Zhuyin } from './shared/zhuyin';
 
 const NOTES_COLUMN = 6;
 
-let wordList;
+let wordList: WordListEntry[];
 
-let showZhuyin;
+let showZhuyin: boolean;
 
-let entries;
+let entries: WordListEntry[];
 
 // migration from manifest v2
 chrome.storage.local.get(['wordList', '_wl_migrated'], data => {
@@ -32,7 +32,7 @@ chrome.storage.local.get(['wordList', '_wl_migrated'], data => {
 
 chrome.storage.local.get(['wordList', 'zhuyin'], data => {
     wordList = data.wordList;
-    showZhuyin = data.zhuyin || globalThis.defaultConfig.zhuyin;
+    showZhuyin = data.zhuyin || defaultConfig.zhuyin;
 
     if (wordList) {
         entries = wordList;
@@ -77,7 +77,7 @@ function convert2Zhuyin(pinyin) {
     let a = pinyin.split(/[\s·]+/);
     for (let i = 0; i < a.length; i++) {
         let syllable = a[i];
-        zhuyin.push(globalThis.accentedPinyin2Zhuyin(syllable));
+        zhuyin.push(accentedPinyin2Zhuyin(syllable));
     }
     return zhuyin.join(' ');
 }

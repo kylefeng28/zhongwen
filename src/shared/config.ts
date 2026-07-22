@@ -1,6 +1,6 @@
-/* global globalThis */
+import { ZhongwenConfig } from './types';
 
-globalThis.defaultConfig = {
+export const defaultConfig: ZhongwenConfig = {
     background: 'yellow',
     fontSize: 'small',
     grammar: true,
@@ -10,5 +10,5 @@ globalThis.defaultConfig = {
     toneColors: true,
     toneColorScheme: 'standard',
     vocab: true,
-    zhuyin: false
+    zhuyin: false,
 };

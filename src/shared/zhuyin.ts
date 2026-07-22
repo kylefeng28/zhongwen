@@ -1,8 +1,6 @@
-/* global globalThis */
+const zhuyinTones: string[] = ['?', '', '\u02CA', '\u02C7', '\u02CB', '\u30FB'];
 
-const zhuyinTones = ['?', '', '\u02CA', '\u02C7', '\u02CB', '\u30FB'];
-
-const pinyinTones = {
+const pinyinTones: Record<number, string> = {
     1: '\u0304',
     2: '\u0301',
     3: '\u030C',
@@ -10,7 +8,7 @@ const pinyinTones = {
     5: ''
 };
 
-const zhuyinMap = {
+const zhuyinMap: Record<string, string> = {
     'a': '\u311a',
     'ai': '\u311e',
     'an': '\u3122',
@@ -423,13 +421,12 @@ const zhuyinMap = {
     'zuo': '\u3117\u3128\u311b'
 };
 
-globalThis.numericPinyin2Zhuyin = function (syllable) {
+export function numericPinyin2Zhuyin(syllable: string): string {
     return zhuyinMap[syllable.substring(0, syllable.length - 1).toLowerCase()]
-        + zhuyinTones[syllable[syllable.length - 1]] + '</span>';
+        + zhuyinTones[syllable[syllable.length - 1] as unknown as number] + '</span>';
+}
 
-};
-
-globalThis.accentedPinyin2Zhuyin = function (syllable) {
+export function accentedPinyin2Zhuyin(syllable: string): string {
     let lowerCased = syllable.toLowerCase();
     let key = lowerCased;
     let tone = 5;
@@ -437,7 +434,7 @@ globalThis.accentedPinyin2Zhuyin = function (syllable) {
         let idx = lowerCased.indexOf(pinyinTones[i]);
         if (idx > 0) {
             key = lowerCased.substring(0, idx);
-            if (idx < lowerCased.length -1) {
+            if (idx < lowerCased.length - 1) {
                 key += lowerCased.substring(idx + 1);
             }
             tone = i;
@@ -445,4 +442,4 @@ globalThis.accentedPinyin2Zhuyin = function (syllable) {
         }
     }
     return zhuyinMap[key] + zhuyinTones[tone];
-};
+}

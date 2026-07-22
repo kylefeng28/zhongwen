@@ -17,15 +17,19 @@
   },
   "homepage": "https://github.com/cschiller/zhongwen#readme",
   "devDependencies": {
+    "@types/chrome": "^0.0.193",
+    "esbuild": "^0.28.1",
     "eslint": "^8.10.0",
     "stylelint": "^14.5.3",
     "stylelint-config-recommended": "^7.0.0",
-    "@types/chrome": "^0.0.193"
+    "typescript": "^7.0.2"
   },
   "stylelint": {
     "extends": "stylelint-config-recommended"
   },
   "scripts": {
+    "build": "node build.js",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint --fix *.js js/options.js js/wordlist.js js/zhuyin.js",
     "csslint": "stylelint css/content.css css/wordlist.css"
   }

@@ -46,9 +46,17 @@
 
 'use strict';
 
+import { SearchResult } from './shared/types';
+
 export class ZhongwenDictionary {
 
-    constructor(wordDict, wordIndex, grammarKeywords, vocabKeywords) {
+    wordDict: string;
+    wordIndex: string;
+    grammarKeywords: Record<string, boolean>;
+    vocabKeywords: Record<string, boolean>;
+    cache: Record<string, string[]>;
+
+    constructor(wordDict: string, wordIndex: string, grammarKeywords: Record<string, boolean>, vocabKeywords: Record<string, boolean>) {
         this.wordDict = wordDict;
         this.wordIndex = wordIndex;
         this.grammarKeywords = grammarKeywords;
@@ -56,7 +64,7 @@ export class ZhongwenDictionary {
         this.cache = {};
     }
 
-    static find(needle, haystack) {
+    static find(needle: string, haystack: string): string | null {
 
         let beg = 0;
         let end = haystack.length - 1;
@@ -78,17 +86,17 @@ export class ZhongwenDictionary {
         return null;
     }
 
-    hasGrammarKeyword(keyword) {
+    hasGrammarKeyword(keyword: string): boolean | undefined {
         return this.grammarKeywords[keyword];
     }
 
-    hasVocabKeyword(keyword) {
+    hasVocabKeyword(keyword: string): boolean | undefined {
         return this.vocabKeywords[keyword];
     }
 
-    wordSearch(word, max) {
+    wordSearch(word: string, max?: number): SearchResult | null {
 
-        let entry = { data: [] };
+        let entry: Partial<SearchResult> & Pick<SearchResult, 'data'> = { data: [] };
 
         let dict = this.wordDict;
         let index = this.wordIndex;
@@ -103,17 +111,17 @@ export class ZhongwenDictionary {
 
                 let ix = this.cache[word];
                 if (!ix) {
-                    ix = ZhongwenDictionary.find(word + ',', index);
-                    if (!ix) {
+                    let findResult = ZhongwenDictionary.find(word + ',', index);
+                    if (!findResult) {
                         this.cache[word] = [];
                         continue;
                     }
-                    ix = ix.split(',');
+                    ix = findResult.split(',');
                     this.cache[word] = ix;
                 }
 
                 for (let j = 1; j < ix.length; ++j) {
-                    let offset = ix[j];
+                    let offset = Number(ix[j]);
 
                     let dentry = dict.substring(offset, dict.indexOf('\n', offset));
 
@@ -138,6 +146,6 @@ export class ZhongwenDictionary {
         }
 
         entry.matchLen = maxLen;
-        return entry;
+        return entry as SearchResult;
     }
 }
