@@ -10,6 +10,8 @@ export interface ZhongwenConfig {
     toneColorScheme: string;
     vocab: boolean;
     zhuyin: boolean;
+    /** Format string for clipboard copy. Placeholders: {simplified}, {traditional}, {pinyin}, {definition} */
+    clipboardFormat: string;
 }
 
 /** A dictionary entry tuple: [dentry, word] */

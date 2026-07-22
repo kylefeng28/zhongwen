@@ -42,6 +42,101 @@ function loadVals() {
     document.querySelector(`input[name="saveToWordList"][value="${config.saveToWordList}"]`).checked = true;
 
     document.querySelector(`input[name="skritterTLD"][value="${config.skritterTLD}"]`).checked = true;
+
+    // Clipboard format
+    loadClipboardFormat();
+}
+
+function loadClipboardFormat() {
+    const section = document.querySelector('#clipboardFormatSection')!;
+    const format = config.clipboardFormat;
+
+    // Predefined format presets: add/remove/reorder here to update the options page
+    const presets = [
+        {
+            id: 'clipboardFormatFull',
+            label: 'Full entry (tab-separated)',
+            value: '{simplified}\t{traditional}\t{pinyin}\t{definition}',
+        },
+        {
+            id: 'clipboardFormatSimplifiedPinyinDef',
+            label: 'Simplified only',
+            value: '{simplified}\t{pinyin}\t{definition}',
+        },
+        {
+            id: 'clipboardFormatTraditionalPinyinDef',
+            label: 'Traditional only',
+            value: '{traditional}\t{pinyin}\t{definition}',
+        },
+        {
+            id: 'clipboardFormatHanziPinyin',
+            label: 'Hanzi + Pinyin',
+            value: '{simplified} {pinyin}',
+        },
+    ];
+
+    // Build the section HTML
+    let html = '';
+
+    // Render preset radio buttons
+    const matchesPreset = presets.some(p => p.value === format);
+    for (const preset of presets) {
+        const checked = preset.value === format ? 'checked' : '';
+        const escapedValue = preset.value.replace(/"/g, '&quot;');
+        html += `
+            <div class="custom-control custom-radio">
+                <input type="radio" id="${preset.id}" name="clipboardFormat"
+                       class="custom-control-input" value="${escapedValue}" ${checked}>
+                <label class="custom-control-label" for="${preset.id}">
+                    ${preset.label}: <code>${preset.value}</code>
+                </label>
+            </div>
+        `;
+    }
+
+    // Custom format radio + text input
+    const escapedFormat = format.replace(/"/g, '&quot;');
+    html += `
+        <div class="custom-control custom-radio">
+            <input type="radio" id="clipboardFormatCustom" name="clipboardFormat"
+                   class="custom-control-input" value="custom" ${!matchesPreset ? 'checked' : ''}>
+            <label class="custom-control-label" for="clipboardFormatCustom">Custom format:</label>
+        </div>
+        <input type="text" class="form-control mt-2" id="clipboardFormatCustomInput"
+               placeholder="{simplified} {pinyin} - {definition}"
+               value="${!matchesPreset ? escapedFormat : ''}"
+               style="max-width: 500px; font-family: monospace;">
+        <small class="form-text text-muted">Use <code>\\t</code> for tab and <code>\\n</code> for newline.</small>
+    `;
+
+    section.innerHTML += html;
+
+    // Attach event listeners to dynamically created elements
+
+    // Preset radio buttons
+    section.querySelectorAll('input[name="clipboardFormat"]').forEach((input) => {
+        input.addEventListener('change', () => {
+            const value = (input as HTMLInputElement).value;
+            if (value === 'custom') {
+                const customInput = section.querySelector('#clipboardFormatCustomInput') as HTMLInputElement;
+                if (customInput.value) {
+                    setOption('clipboardFormat', customInput.value);
+                }
+            } else {
+                setOption('clipboardFormat', value);
+            }
+        });
+    });
+
+    // Custom text input: auto-selects "Custom" radio when typed into
+    const customInput = section.querySelector('#clipboardFormatCustomInput') as HTMLInputElement;
+    customInput.addEventListener('input', () => {
+        const customRadio = section.querySelector('#clipboardFormatCustom') as HTMLInputElement;
+        customRadio.checked = true;
+        if (customInput.value) {
+            setOption('clipboardFormat', customInput.value);
+        }
+    });
 }
 
 function setPopupColor(popupColor: string) {

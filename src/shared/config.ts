@@ -11,4 +11,5 @@ export const defaultConfig: ZhongwenConfig = {
     toneColorScheme: 'standard',
     vocab: true,
     zhuyin: false,
+    clipboardFormat: '{simplified}\t{traditional}\t{pinyin}\t{definition}',
 };
