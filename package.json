@@ -30,6 +30,7 @@
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch",
+    "package": "node build.js && node scripts/package.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --fix *.js js/options.js js/wordlist.js js/zhuyin.js",
     "csslint": "stylelint css/content.css css/wordlist.css"
