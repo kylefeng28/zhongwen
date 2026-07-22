@@ -43,6 +43,9 @@
     "storage",
     "tabs"
   ],
+  "host_permissions": [
+    "https://www.mdbg.net/*"
+  ],
   "commands": {
     "_execute_action": {
       "description": "Enable/Disable Zhongwen"

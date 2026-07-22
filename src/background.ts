@@ -45,6 +45,7 @@
  */
 
 import { ZhongwenDictionary } from './dict';
+import { loadDictData, getDictStatus, refreshDictData } from './dict-loader';
 import { defaultConfig } from './shared/config';
 import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
 
@@ -255,6 +256,37 @@ chrome.runtime.onMessage.addListener(function (
     return undefined;
 });
 
+// Dictionary management messages (from options page)
+chrome.runtime.onMessage.addListener(function (
+    message: { type: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+): boolean | undefined {
+
+    if (message.type === 'getDictStatus') {
+        getDictStatus().then(status => {
+            sendResponse(status);
+        });
+        return true;
+    }
+
+    if (message.type === 'refreshDict') {
+        refreshDictData().then(data => {
+            // Reload the dictionary instance with the fresh data
+            dict = new ZhongwenDictionary(data.wordDict, data.wordIndex, data.grammarKeywords, data.vocabKeywords);
+            // Return updated status
+            return getDictStatus();
+        }).then(status => {
+            sendResponse({ success: true, status });
+        }).catch(err => {
+            sendResponse({ success: false, error: String(err) });
+        });
+        return true;
+    }
+
+    return undefined;
+});
+
 function search(text: string): Promise<SearchResult | null> {
 
     if (!dict) {
@@ -273,21 +305,8 @@ function search(text: string): Promise<SearchResult | null> {
 }
 
 async function loadDictionary(): Promise<ZhongwenDictionary> {
-    let [wordDict, wordIndex, grammarKeywords, vocabKeywords] = await loadDictData();
+    const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
     return new ZhongwenDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
-}
-
-async function loadDictData(): Promise<[string, string, Record<string, boolean>, Record<string, boolean>]> {
-    let wordDict = fetch(chrome.runtime.getURL(
-        "data/cedict_ts.u8")).then(r => r.text());
-    let wordIndex = fetch(chrome.runtime.getURL(
-        "data/cedict.idx")).then(r => r.text());
-    let grammarKeywords = fetch(chrome.runtime.getURL(
-        "data/grammarKeywordsMin.json")).then(r => r.json());
-    let vocabKeywords = fetch(chrome.runtime.getURL(
-        "data/vocabularyKeywordsMin.json")).then(r => r.json());
-
-    return Promise.all([wordDict, wordIndex, grammarKeywords, vocabKeywords]);
 }
 
 function lookup(dictionary: ZhongwenDictionary, text: string): SearchResult | null {
