@@ -45,18 +45,49 @@ function copyStaticAssets() {
     }
 }
 
-async function build() {
+async function buildOrWatch(buildOptions, watch) {
+  if (watch) {
+    // Use esbuild context API to start a persistent watch process
+    const plugins = [{
+      name: 'watch-logger',
+      setup(build) {
+        let count = 0;
+        build.onStart(() => {
+          console.log(`[watch] build started for ${buildOptions.entryPoints}...`);
+        });
+        build.onEnd(result => {
+          count++;
+          if (result.errors.length > 0) {
+            console.log(`[watch] build ${count} failed with ${result.errors.length} errors`);
+          } else {
+            console.log(`[watch] build ${count} succeeded, outputted to ${buildOptions.outfile}`);
+          }
+        });
+      },
+    }];
+
+    let ctx = await esbuild.context({ ...buildOptions, plugins });
+    return ctx.watch();
+  } else {
+    return esbuild.build(buildOptions);
+  }
+}
+
+async function build(watch) {
     cleanDist();
     copyStaticAssets();
 
+    const allCtxs = [];
+
     // Service worker (background worker)
-    await esbuild.build({
+    const serviceCtx = buildOrWatch({
         entryPoints: ['src/background.ts'],
         bundle: true,
         outfile: 'dist/background.js',
         format: 'esm',
         target: 'chrome110',
-    });
+    }, watch);
+    allCtxs.push(serviceCtx);
 
     const scripts = {
       // Content script for popup
@@ -68,19 +99,26 @@ async function build() {
     };
 
     for (const [src, outfile] of Object.entries(scripts)) {
-      await esbuild.build({
+      const scriptCtx = buildOrWatch({
           entryPoints: [src],
           bundle: true,
           outfile: outfile,
           format: 'iife',
           target: 'chrome110',
-      });
+      }, watch);
+      allCtxs.push(scriptCtx);
     }
 
-    console.log('Build complete, outputted to ./dist/');
+    if (watch) {
+      console.log('Watching for file changes...');
+    }
+    else {
+      console.log('Build complete, outputted all files to ./dist/');
+    }
 }
 
-build().catch((err) => {
+const watch = process.argv.includes('--watch');
+build(watch).catch((err) => {
     console.error(err);
     process.exit(1);
 });
