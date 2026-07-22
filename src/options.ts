@@ -43,6 +43,8 @@ function loadVals() {
 
     document.querySelector(`input[name="skritterTLD"][value="${config.skritterTLD}"]`).checked = true;
 
+    document.querySelector('#ttsEnabled').checked = config.ttsEnabled;
+
     // Clipboard format
     loadClipboardFormat();
 }
@@ -196,4 +198,7 @@ window.addEventListener('load', () => {
         input.addEventListener('change',
             () => setOption('skritterTLD', input.getAttribute('value')));
     });
+
+    document.querySelector('#ttsEnabled').addEventListener('change',
+        (event) => setOption('ttsEnabled', event.target.checked));
 });

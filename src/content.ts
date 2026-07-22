@@ -46,6 +46,7 @@
 
 import { defaultConfig } from './shared/config';
 import { numericPinyin2Zhuyin } from './shared/zhuyin';
+import { ttsMandarin, ttsCantonese } from './tts';
 import type { ZhongwenConfig, SearchResult, SelectionEnd } from './shared/types';
 
 let config: ZhongwenConfig = { ...defaultConfig };
@@ -405,6 +406,18 @@ function onKeyDown(keyDown: KeyboardEvent): void {
                     tabType: 'moedict',
                     url: moedict
                 });
+            }
+            break;
+
+        case 87: // 'w': TTS Mandarin
+            if (config.ttsEnabled) {
+                ttsMandarin(window.getSelection()?.toString() || '');
+            }
+            break;
+
+        case 69: // 'e': TTS Cantonese
+            if (config.ttsEnabled) {
+                ttsCantonese(window.getSelection()?.toString() || '');
             }
             break;
 

@@ -137,6 +137,16 @@
     <h2 class="mb-3">Other Options</h2>
 
     <div class="form-group mb-4">
+        <label>Text-to-Speech (TTS)</label>
+        <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="ttsEnabled" name="ttsEnabled">
+            <label class="custom-control-label" for="ttsEnabled">Enable text-to-speech.
+                Press <kbd>W</kbd> for Mandarin or <kbd>E</kbd> for Cantonese pronunciation.</label>
+        </div>
+        <p class="text-muted small">TTS is dependant on locally installed voice packs. For Windows, <a href="https://support.microsoft.com/en-us/education/learning-accelerators/download-languages-and-voices-for-immersive-reader-read-mode-and-read-aloud">this</a> link should be useful. On Linux, follow your distribution's guide for installing Festival, Piper or other preferred speech dispatcher system</p>
+    </div>
+
+    <div class="form-group mb-4">
         <label>Saving entries to the <a
                 href="https://github.com/cschiller/zhongwen/#built-in-word-list"
                 target="_blank">Built-in Word List</a></label>

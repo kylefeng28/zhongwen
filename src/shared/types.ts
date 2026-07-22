@@ -12,6 +12,7 @@ export interface ZhongwenConfig {
     zhuyin: boolean;
     /** Format string for clipboard copy. Placeholders: {simplified}, {traditional}, {pinyin}, {definition} */
     clipboardFormat: string;
+    ttsEnabled: boolean;
 }
 
 /** A dictionary entry tuple: [dentry, word] */

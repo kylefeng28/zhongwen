@@ -12,4 +12,5 @@ export const defaultConfig: ZhongwenConfig = {
     vocab: true,
     zhuyin: false,
     clipboardFormat: '{simplified}\t{traditional}\t{pinyin}\t{definition}',
+    ttsEnabled: false,
 };
