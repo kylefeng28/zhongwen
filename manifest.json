@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Zhongwen: Chinese-English Dictionary",
+  "name": "Zhongwen: Chinese-English Dictionary)",
   "short_name": "Zhongwen",
   "version": "6.3.0",
   "author": "Christian Schiller",
@@ -44,6 +44,9 @@
     "contextMenus",
     "storage",
     "tabs"
+  ],
+  "host_permissions": [
+    "https://www.mdbg.net/*"
   ],
   "commands": {
     "_execute_action": {

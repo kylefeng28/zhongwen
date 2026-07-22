@@ -41,6 +41,71 @@ function loadVals() {
     document.querySelector(`input[name="saveToWordList"][value="${config.saveToWordList}"]`).checked = true;
 
     document.querySelector(`input[name="skritterTLD"][value="${config.skritterTLD}"]`).checked = true;
+
+    loadDictStatus();
+}
+
+function loadDictStatus() {
+    const section = document.querySelector('#dictStatusSection');
+
+    // Show loading state
+    section.innerHTML = '<p class="text-muted">Checking dictionary status...</p>';
+
+    chrome.runtime.sendMessage({ type: 'getDictStatus' }, (status) => {
+        renderDictStatus(section, status);
+    });
+}
+
+function renderDictStatus(section, status) {
+    let html = '';
+
+    if (status && status.hasCachedDict) {
+        const date = new Date(status.cachedTimestamp).toLocaleString();
+        html += `
+            <p><strong>Source:</strong> Downloaded from MDBG</p>
+            <p><strong>Last updated:</strong> ${date}</p>
+            <p><strong>Entries:</strong> ~${status.entryCount.toLocaleString()}</p>
+        `;
+    } else {
+        html += `
+            <p><strong>Source:</strong> Bundled with extension</p>
+            <p class="text-muted">No downloaded dictionary cached. Click the button below to download the latest version from MDBG.</p>
+        `;
+    }
+
+    html += `
+        <button id="refreshDictBtn" class="btn btn-primary btn-sm mt-2">
+            ${status && status.hasCachedDict ? 'Check for updates' : 'Download latest CEDICT'}
+        </button>
+        <span id="refreshDictStatus" class="ml-2 text-muted small"></span>
+    `;
+
+    section.innerHTML = html;
+
+    // Attach refresh button handler
+    const btn = document.querySelector('#refreshDictBtn');
+    const statusSpan = document.querySelector('#refreshDictStatus');
+
+    btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = 'Downloading...';
+        statusSpan.textContent = '';
+
+        chrome.runtime.sendMessage({ type: 'refreshDict' }, (response) => {
+            if (response && response.success) {
+                statusSpan.textContent = '✓ Dictionary updated successfully!';
+                statusSpan.className = 'ml-2 text-success small';
+                // Re-render with new status
+                renderDictStatus(section, response.status);
+            } else {
+                const errorMsg = response.error || 'Unknown error';
+                statusSpan.textContent = '✗ Update failed: ' + errorMsg;
+                statusSpan.className = 'ml-2 text-danger small';
+                btn.disabled = false;
+                btn.textContent = 'Retry';
+            }
+        });
+    });
 }
 
 function setPopupColor(popupColor) {

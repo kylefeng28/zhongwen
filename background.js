@@ -50,6 +50,7 @@
 
 import { ZhongwenDictionary } from './dict.js';
 import './js/config.js';
+import { loadDictData, refreshDictData, getDictStatus } from './js/dict-loader.js';
 
 let dict;
 
@@ -274,19 +275,6 @@ async function loadDictionary() {
     return new ZhongwenDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
 }
 
-async function loadDictData() {
-    let wordDict = fetch(chrome.runtime.getURL(
-        "data/cedict_ts.u8")).then(r => r.text());
-    let wordIndex = fetch(chrome.runtime.getURL(
-        "data/cedict.idx")).then(r => r.text());
-    let grammarKeywords = fetch(chrome.runtime.getURL(
-        "data/grammarKeywordsMin.json")).then(r => r.json());
-    let vocabKeywords = fetch(chrome.runtime.getURL(
-        "data/vocabularyKeywordsMin.json")).then(r => r.json());
-
-    return Promise.all([wordDict, wordIndex, grammarKeywords, vocabKeywords]);
-}
-
 function lookup(dictionary, text) {
 
     let entry = dictionary.wordSearch(text);
@@ -400,3 +388,24 @@ chrome.runtime.onMessage.addListener(function (message) {
     }
 });
 
+// Dictionary management messages (from options page)
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    if (message.type === "getDictStatus") {
+        getDictStatus().then((status) => {
+            sendResponse(status);
+        });
+        return true;
+    }
+    if (message.type === "refreshDict") {
+        refreshDictData().then((data) => {
+            dict = new ZhongwenDictionary(data.wordDict, data.wordIndex, data.grammarKeywords, data.vocabKeywords);
+            return getDictStatus();
+        }).then((status) => {
+            sendResponse({ success: true, status });
+        }).catch((err) => {
+            sendResponse({ success: false, error: String(err) });
+        });
+        return true;
+    }
+    return void 0;
+});
