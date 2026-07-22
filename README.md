@@ -1,19 +1,16 @@
-# 中文 Zhongwen
+# Taigi: Taiwanese 台语 Popup Dictionary
 
 [![Chrome Web Store Version](https://img.shields.io/chrome-web-store/v/kkmlkkjojmombglmlpbpapmhcaljjkde)](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde)
 [![Chrome Users](https://img.shields.io/chrome-web-store/users/kkmlkkjojmombglmlpbpapmhcaljjkde?label=chrome%20users)](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde)
 [![Mozilla Add-on Version](https://img.shields.io/amo/v/zhongwen)](https://addons.mozilla.org/en-US/firefox/addon/zhongwen/)
 [![Firefox Users](https://img.shields.io/amo/users/zhongwen?label=firefox%20users)](https://addons.mozilla.org/en-US/firefox/addon/zhongwen/)
 
-## A Chinese Pop-Up Dictionary and Learning Tool
+## A Taiwanese Taigi Pop-Up Dictionary and Learning Tool
 
-This browser extension allows you to translate Chinese characters and words
+This browser extension allows you to hover Chinese characters and words and see the Tâi-lô pronunciation and definition
 by simply hovering over them with the mouse.  
-It also contains useful features for learners of the Chinese language.
 
-[![Chrome](https://storage.googleapis.com/chrome-gcs-uploader.appspot.com/image/WlD8wC6g8khYWPJUsQceQkhXSlv1/UV4C4ybeBTsZt43U4xis.png)](https://chrome.google.com/extensions/detail/kkmlkkjojmombglmlpbpapmhcaljjkde)
-[![Firefox](https://blog.mozilla.org/addons/files/2015/11/get-the-addon.png)](https://addons.mozilla.org/en-US/firefox/addon/zhongwen)
-
+Based on Christian Schiller's excellent Zhongwen popup dictionary for Mandarin: https://github.com/cschiller/zhongwen
 
 ## Highlights
 - Supports both traditional and simplified characters.

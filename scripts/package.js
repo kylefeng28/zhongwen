@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const name = 'zhongwen';
+const name = 'taigi';
 const distDir = path.resolve('dist');
 const manifest = JSON.parse(fs.readFileSync(path.join(distDir, 'manifest.json'), 'utf-8'));
 const version = manifest.version;
