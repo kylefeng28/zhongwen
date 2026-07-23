@@ -15,12 +15,33 @@ export interface ZhongwenConfig {
     ttsEnabled: boolean;
 }
 
+/** A single definition with optional part-of-speech and examples */
+export interface Definition {
+    def: string;
+    type?: string;  // part of speech
+    examples?: Array<{ text: string; reading?: string; translation?: string }>;
+}
+
+/** A normalized dictionary entry result */
+export interface DictionaryResult {
+    /** The headword/entry that was matched */
+    headword: string;
+    /** Traditional characters (if applicable) */
+    traditional?: string;
+    /** The pronunciation/reading (pinyin, Tai-lo, jyutping, etc.) */
+    reading: string;
+    /** List of definitions */
+    definitions: Definition[];
+    /** Reading type label (e.g. '白', '文', '替' for Taigi heteronyms) */
+    readingType?: string;
+}
+
 /** A dictionary entry tuple: [dentry, word] */
 export type DictionaryEntry = [dentry: string, word: string];
 
 /** Result of a dictionary search */
 export interface SearchResult {
-    data: DictionaryEntry[];
+    data: DictionaryResult[];
     matchLen: number;
     more?: number;
     grammar?: { keyword: string; index: number };

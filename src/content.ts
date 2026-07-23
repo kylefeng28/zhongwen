@@ -47,7 +47,7 @@
 import { defaultConfig } from './shared/config';
 import { numericPinyin2Zhuyin } from './shared/zhuyin';
 import { ttsMandarin, ttsCantonese } from './tts';
-import type { ZhongwenConfig, SearchResult, SelectionEnd } from './shared/types';
+import type { ZhongwenConfig, DictionaryResult, SearchResult, SelectionEnd } from './shared/types';
 
 let config: ZhongwenConfig = { ...defaultConfig };
 
@@ -912,87 +912,15 @@ function copyToClipboard(data: string): void {
 }
 
 function makeHtml(result: SearchResult, showToneColors: boolean): string {
-
-    let entry: RegExpMatchArray | null;
     let html = '';
     let texts: string[][] = [];
-    let hanziClass: string;
 
     if (result === null) return '';
 
     for (let i = 0; i < result.data.length; ++i) {
-        entry = result.data[i][0].match(/^([^\s]+?)\s+([^\s]+?)\s+\[(.*?)\]?\s*\/(.+)\//);
-        if (!entry) continue;
-
-        // Hanzi
-
-        if (config.simpTrad === 'auto') {
-
-            let word: string = result.data[i][1];
-
-            hanziClass = 'w-hanzi';
-            if (config.fontSize === 'small') {
-                hanziClass += '-small';
-            }
-            html += '<span class="' + hanziClass + '">' + word + '</span>&nbsp;';
-
-        } else {
-
-            hanziClass = 'w-hanzi';
-            if (config.fontSize === 'small') {
-                hanziClass += '-small';
-            }
-            html += '<span class="' + hanziClass + '">' + entry[2] + '</span>&nbsp;';
-            if (entry[1] !== entry[2]) {
-                html += '<span class="' + hanziClass + '">' + entry[1] + '</span>&nbsp;';
-            }
-
-        }
-
-        // Pinyin
-
-        let pinyinClass = 'w-pinyin';
-        if (config.fontSize === 'small') {
-            pinyinClass += '-small';
-        }
-        let p: [string, string, string] = pinyinAndZhuyin(entry[3], showToneColors, pinyinClass);
-        html += p[0];
-
-        // Zhuyin
-
-        if (config.zhuyin) {
-            html += '<br>' + p[2];
-        }
-
-        // Definition
-
-        let defClass = 'w-def';
-        if (config.fontSize === 'small') {
-            defClass += '-small';
-        }
-        let translation: string = entry[4].replace(/\//g, ' ◆ ');
-        html += '<br><span class="' + defClass + '">' + translation + '</span><br>';
-
-        let addFinalBr: boolean = false;
-
-        // Grammar
-        if (config.grammar && result.grammar && result.grammar.index === i) {
-            html += '<br><span class="grammar">Press "g" for grammar and usage notes.</span><br>';
-            addFinalBr = true;
-        }
-
-        // Vocab
-        if (config.vocab && result.vocab && result.vocab.index === i) {
-            html += '<br><span class="vocab">Press "v" for vocabulary notes.</span><br>';
-            addFinalBr = true;
-        }
-
-        if (addFinalBr) {
-            html += '<br>';
-        }
-
-        texts[i] = [entry[2], entry[1], p[1], translation, entry[3]];
+        html += makeTaigiHtml(result.data[i], i, texts);
     }
+
     if (result.more) {
         html += '&hellip;<br/>';
     }
@@ -1000,6 +928,68 @@ function makeHtml(result: SearchResult, showToneColors: boolean): string {
     savedSearchResults = texts as string[][] & { grammar?: SearchResult['grammar']; vocab?: SearchResult['vocab'] };
     savedSearchResults.grammar = result.grammar;
     savedSearchResults.vocab = result.vocab;
+
+    return html;
+}
+
+function makeTaigiHtml(entry: DictionaryResult, index: number, texts: string[][]): string {
+    let html = '';
+    let hanziClass = 'w-hanzi';
+    if (config.fontSize === 'small') {
+        hanziClass += '-small';
+    }
+
+    // Headword
+    html += '<span class="' + hanziClass + '">' + entry.headword + '</span>&nbsp;';
+
+    // Reading type badge (白/文/替/俗)
+    if (entry.readingType) {
+        const colors: Record<string, string> = { '白': 'green', '文': 'blue', '替': 'gray', '俗': 'orange' };
+        const color = colors[entry.readingType] || 'gray';
+        html += '<span style="color:' + color + ';font-weight:bold;font-size:0.8em;">' + entry.readingType + '</span>&nbsp;';
+    }
+
+    // Tai-lo reading
+    let pinyinClass = 'w-pinyin';
+    if (config.fontSize === 'small') {
+        pinyinClass += '-small';
+    }
+    html += '<span class="' + pinyinClass + '">' + entry.reading + '</span>';
+
+    // Definitions
+    let defClass = 'w-def';
+    if (config.fontSize === 'small') {
+        defClass += '-small';
+    }
+
+    for (const def of entry.definitions) {
+        let defHtml = '';
+        if (def.type) {
+            defHtml += '<b>【' + def.type + '】</b>';
+        }
+        defHtml += def.def;
+        html += '<br><span class="' + defClass + '">' + defHtml + '</span>';
+
+        // Examples
+        if (def.examples) {
+            for (const ex of def.examples) {
+                html += '<br><span class="' + defClass + '" style="margin-left:1em;font-size:0.9em;">';
+                html += ex.text;
+                if (ex.reading) {
+                    html += ' <i>' + ex.reading + '</i>';
+                }
+                if (ex.translation) {
+                    html += ' <span style="color:gray;">' + ex.translation + '</span>';
+                }
+                html += '</span>';
+            }
+        }
+    }
+    html += '<br>';
+
+    // Store for clipboard: [simplified, traditional, reading, definition, raw_reading]
+    const translation = entry.definitions.map(d => (d.type ? '【' + d.type + '】' : '') + d.def).join('; ');
+    texts[index] = [entry.headword, entry.headword, entry.reading, translation, entry.reading];
 
     return html;
 }
@@ -1054,6 +1044,7 @@ function tonify(vowels: string, tone: number): [string, string] {
     return [html, text];
 }
 
+/*
 function pinyinAndZhuyin(syllables: string, showToneColors: boolean, pinyinClass: string): [string, string, string] {
     let text = '';
     let html = '';
@@ -1113,6 +1104,7 @@ function pinyinAndZhuyin(syllables: string, showToneColors: boolean, pinyinClass
     }
     return [html, text, zhuyin];
 }
+*/
 
 let miniHelp: string = `
     <span style="font-weight: bold;">Zhongwen Chinese-English Dictionary</span><br><br>

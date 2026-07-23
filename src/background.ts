@@ -44,12 +44,11 @@
 
  */
 
-import { ZhongwenDictionary } from './dict';
-import { loadDictData, getDictStatus, refreshDictData } from './dict-loader';
+import { TaigiDictionary } from './taigi';
 import { defaultConfig } from './shared/config';
 import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
 
-let dict: ZhongwenDictionary | undefined;
+let dict: TaigiDictionary | undefined;
 
 chrome.runtime.onInstalled.addListener((): void => {
 
@@ -256,6 +255,7 @@ chrome.runtime.onMessage.addListener(function (
     return undefined;
 });
 
+/*
 // Dictionary management messages (from options page)
 chrome.runtime.onMessage.addListener(function (
     message: { type: string },
@@ -286,6 +286,7 @@ chrome.runtime.onMessage.addListener(function (
 
     return undefined;
 });
+*/
 
 function search(text: string): Promise<SearchResult | null> {
 
@@ -304,30 +305,13 @@ function search(text: string): Promise<SearchResult | null> {
     }
 }
 
-async function loadDictionary(): Promise<ZhongwenDictionary> {
-    const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
-    return new ZhongwenDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+async function loadDictionary(): Promise<TaigiDictionary> {
+    const taigiData = await fetch(chrome.runtime.getURL('data/dict-twblg.json')).then(r => r.json());
+    return new TaigiDictionary(taigiData);
 }
 
-function lookup(dictionary: ZhongwenDictionary, text: string): SearchResult | null {
-
-    let entry = dictionary.wordSearch(text);
-
-    if (entry) {
-        for (let i = 0; i < entry.data.length; i++) {
-            let word: string = entry.data[i][1];
-            if (dictionary.hasGrammarKeyword(word) && (entry.matchLen === word.length)) {
-                // the final index should be the last one with the maximum length
-                entry.grammar = { keyword: word, index: i };
-            }
-            if (dictionary.hasVocabKeyword(word) && (entry.matchLen === word.length)) {
-                // the final index should be the last one with the maximum length
-                entry.vocab = { keyword: word, index: i };
-            }
-        }
-    }
-
-    return entry;
+function lookup(dictionary: TaigiDictionary, text: string): SearchResult | null {
+    return dictionary.search(text);
 }
 
 chrome.tabs.onActivated.addListener((activeInfo: chrome.tabs.TabActiveInfo): void => {
