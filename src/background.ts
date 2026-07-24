@@ -44,12 +44,11 @@
 
  */
 
-import { ZhongwenDictionary } from './dict';
-import { loadDictData, getDictStatus, refreshDictData } from './dict-loader';
+import { loadDictionary, refreshDictionary, getDictStatus } from './dictionaries/manager';
 import { defaultConfig } from './shared/config';
 import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
 
-let dict: ZhongwenDictionary | undefined;
+let dict: CedictDictionary | undefined;
 
 chrome.runtime.onInstalled.addListener((): void => {
 
@@ -271,10 +270,9 @@ chrome.runtime.onMessage.addListener(function (
     }
 
     if (message.type === 'refreshDict') {
-        refreshDictData().then(data => {
-            // Reload the dictionary instance with the fresh data
-            dict = new ZhongwenDictionary(data.wordDict, data.wordIndex, data.grammarKeywords, data.vocabKeywords);
-            // Return updated status
+        refreshDictionary().then(refreshedDict => {
+            // Replace the dictionary instance with the refreshed instance and return updated status
+            dict = refreshedDict;
             return getDictStatus();
         }).then(status => {
             sendResponse({ success: true, status });
@@ -304,12 +302,7 @@ function search(text: string): Promise<SearchResult | null> {
     }
 }
 
-async function loadDictionary(): Promise<ZhongwenDictionary> {
-    const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
-    return new ZhongwenDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
-}
-
-function lookup(dictionary: ZhongwenDictionary, text: string): SearchResult | null {
+function lookup(dictionary: CedictDictionary, text: string): SearchResult | null {
 
     let entry = dictionary.wordSearch(text);
 

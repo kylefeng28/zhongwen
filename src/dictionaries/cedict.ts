@@ -48,7 +48,7 @@
 
 import { SearchResult } from './shared/types';
 
-export class ZhongwenDictionary {
+export class CedictDictionary {
 
     wordDict: string;
     wordIndex: string;
@@ -111,7 +111,7 @@ export class ZhongwenDictionary {
 
                 let ix = this.cache[word];
                 if (!ix) {
-                    let findResult = ZhongwenDictionary.find(word + ',', index);
+                    let findResult = CedictDictionary.find(word + ',', index);
                     if (!findResult) {
                         this.cache[word] = [];
                         continue;
