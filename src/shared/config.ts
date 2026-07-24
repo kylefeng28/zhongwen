@@ -13,7 +13,7 @@ export const defaultConfig: ZhongwenConfig = {
     zhuyin: false,
     clipboardFormat: '{simplified}\t{traditional}\t{pinyin}\t{definition}',
     ttsEnabled: false,
-    enabledDicts: ['cedict'],
+    enabledDicts: ['cedict', 'taigi'],
 };
 
 let config: ZhongwenConfig = { ...defaultConfig };

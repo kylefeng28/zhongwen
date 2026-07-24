@@ -2,10 +2,12 @@ import type { Dictionary, DictionaryLoader } from './dictionary';
 import type { MultiDictSearchResult, DictionaryResult } from '../shared/types';
 import { CedictDictionary } from './cedict';
 import { CedictLoader, getDictStatus } from './cedict-loader';
+import { TaigiLoader } from './taigi-loader';
 
 /** All available loaders, keyed by dictionary ID */
 const ALL_LOADERS: Record<string, DictionaryLoader> = {
     cedict: new CedictLoader(),
+    taigi: new TaigiLoader(),
 };
 
 /**
@@ -44,10 +46,15 @@ export class DictionaryManager {
     async loadDictionaries(enabledDicts: string[]): Promise<void> {
         this.dictionaries = [];
 
+        console.log('[Zhongwen] Loading dictionaries:', enabledDicts);
+
         // Load dictionaries in the order specified by enabledDicts
         for (const dictId of enabledDicts) {
             const loader = ALL_LOADERS[dictId];
-            if (!loader) continue;
+            if (!loader) {
+                console.log(`[Zhongwen] Unknown dictionary type: ${dictId}`)
+                continue;
+            }
 
             try {
                 const dict = await loader.loadDictionary();
