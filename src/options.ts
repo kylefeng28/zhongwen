@@ -8,6 +8,7 @@
 
 import { getConfig, loadConfig } from './shared/config';
 import type { ZhongwenConfig } from './shared/types';
+import { ALL_DICTIONARIES } from './dictionaries/manager';
 
 let config: ZhongwenConfig = getConfig();
 
@@ -43,6 +44,9 @@ function loadVals() {
 
     // Clipboard format
     loadClipboardFormat();
+
+    // Dictionary enable/order
+    loadDictOrder();
 
     // Dictionary status
     loadDictStatus();
@@ -140,6 +144,106 @@ function loadClipboardFormat() {
     });
 }
 
+function loadDictOrder() {
+    const section = document.querySelector('#dictOrderSection')!;
+
+    const enabledDicts: string[] = config.enabledDicts;
+
+    // Sort: enabled dicts first (in their order), then disabled ones
+    const sorted = [...ALL_DICTIONARIES].sort((a, b) => {
+        const ai = enabledDicts.indexOf(a.id);
+        const bi = enabledDicts.indexOf(b.id);
+        // enabled items sort by their position; disabled items go to the end
+        const aPos = ai === -1 ? 999 : ai;
+        const bPos = bi === -1 ? 999 : bi;
+        return aPos - bPos;
+    });
+
+    function render() {
+        let html = '<label>Enabled dictionaries (drag to reorder — top = shown first in popup)</label>';
+        html += '<ul id="dictOrderList" style="list-style:none;padding:0;">';
+        for (const dict of sorted) {
+            const enabled = enabledDicts.includes(dict.id);
+            html += `
+                <li data-id="${dict.id}" style="padding:6px 10px;margin:4px 0;border:1px solid #ddd;border-radius:4px;cursor:grab;background:#f8f9fa;display:flex;align-items:center;">
+                    <span style="margin-right:10px;cursor:grab;">☰</span>
+                    <input type="checkbox" id="dict_${dict.id}" ${enabled ? 'checked' : ''}
+                           style="margin-right:8px;">
+                    <label for="dict_${dict.id}" style="margin:0;cursor:pointer;">${dict.label}</label>
+                </li>
+            `;
+        }
+        html += '</ul>';
+        html += '<small class="form-text text-muted">Check to enable. Drag to reorder. Top dictionary results appear first in the popup.</small>';
+        section.innerHTML = html;
+
+        attachDictOrderListeners();
+    }
+
+    function saveEnabledDicts() {
+        // Read current order and checked state from the DOM
+        const list = document.querySelector('#dictOrderList') as HTMLUListElement;
+        const items = [...list.querySelectorAll('li')];
+        const newEnabledDicts: string[] = [];
+        for (const item of items) {
+            const id = item.getAttribute('data-id')!;
+            const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
+            if (checkbox.checked) {
+                newEnabledDicts.push(id);
+            }
+        }
+        setOption('enabledDicts', newEnabledDicts);
+    }
+
+    function attachDictOrderListeners() {
+        const list = document.querySelector('#dictOrderList') as HTMLUListElement;
+        let draggedItem: HTMLLIElement | null = null;
+
+        // Checkbox change listeners
+        list.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', saveEnabledDicts);
+        });
+
+        // Drag-and-drop reordering
+        list.querySelectorAll('li').forEach((li) => {
+            li.setAttribute('draggable', 'true');
+
+            li.addEventListener('dragstart', (e) => {
+                draggedItem = li as HTMLLIElement;
+                (li as HTMLElement).style.opacity = '0.5';
+                (e as DragEvent).dataTransfer!.effectAllowed = 'move';
+            });
+
+            li.addEventListener('dragend', () => {
+                (li as HTMLElement).style.opacity = '1';
+                draggedItem = null;
+            });
+
+            li.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                (e as DragEvent).dataTransfer!.dropEffect = 'move';
+            });
+
+            li.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedItem && draggedItem !== li) {
+                    const items = [...list.querySelectorAll('li')];
+                    const draggedIdx = items.indexOf(draggedItem);
+                    const targetIdx = items.indexOf(li as HTMLLIElement);
+                    if (draggedIdx < targetIdx) {
+                        list.insertBefore(draggedItem, li.nextSibling);
+                    } else {
+                        list.insertBefore(draggedItem, li);
+                    }
+                    saveEnabledDicts();
+                }
+            });
+        });
+    }
+
+    render();
+}
+
 function loadDictStatus() {
     const section = document.querySelector('#dictStatusSection')!;
 
@@ -152,7 +256,7 @@ function loadDictStatus() {
 }
 
 function renderDictStatus(section: Element, status: { hasCachedDict: boolean; cachedTimestamp: number | null; entryCount: number | null }) {
-    let html = '';
+    let html = '<h4>CEDICT Dictionary</h4>';
 
     if (status && status.hasCachedDict) {
         const date = new Date(status.cachedTimestamp!).toLocaleString();
@@ -170,7 +274,7 @@ function renderDictStatus(section: Element, status: { hasCachedDict: boolean; ca
 
     html += `
         <button id="refreshDictBtn" class="btn btn-primary btn-sm mt-2">
-            ${status && status.hasCachedDict ? 'Check for updates' : 'Download latest CEDICT'}
+            ${status && status.hasCachedDict ? 'Check for CEDICT updates' : 'Download latest CEDICT'}
         </button>
         <span id="refreshDictStatus" class="ml-2 text-muted small"></span>
     `;
@@ -216,7 +320,7 @@ function setToneColorScheme(toneColorScheme: string) {
     }
 }
 
-function setOption(option: string, value: string) {
+function setOption(option: string, value: unknown) {
     chrome.storage.local.set({[option]: value});
 }
 

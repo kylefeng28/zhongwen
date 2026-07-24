@@ -3,12 +3,19 @@ import type { MultiDictSearchResult, DictionaryResult } from '../shared/types';
 import { CedictDictionary } from './cedict';
 import { CedictLoader, getDictStatus } from './cedict-loader';
 import { TaigiLoader } from './taigi-loader';
+import { ID as CEDICT_ID, NAME as CEDICT_NAME } from './cedict.ts';
+import { ID as TAIGI_ID, NAME as TAIGI_NAME } from './taigi.ts';
 
 /** All available loaders, keyed by dictionary ID */
 const ALL_LOADERS: Record<string, DictionaryLoader> = {
     cedict: new CedictLoader(),
     taigi: new TaigiLoader(),
 };
+
+export const ALL_DICTIONARIES = [
+    { id: CEDICT_ID, label: CEDICT_NAME },
+    { id: TAIGI_ID, label: TAIGI_NAME },
+];
 
 /**
  * Manages multiple dictionary instances and aggregates search results.

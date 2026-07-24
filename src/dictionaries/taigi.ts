@@ -38,9 +38,11 @@ function parseExample(raw: string): { text: string; reading?: string; translatio
     };
 }
 
+export const ID = 'taigi';
+export const NAME = 'MoE Taiwanese Hokkien (台語)';
+
 export class TaigiDictionary implements Dictionary {
-    readonly id = 'taigi';
-    readonly name = 'MoE Taiwanese Hokkien (台語)';
+    readonly id = ID;
 
     /** Map from headword (Chinese characters) to entries */
     private index: Map<string, TaigiRawEntry[]>;

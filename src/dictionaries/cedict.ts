@@ -52,9 +52,11 @@ import type { DictSearchResponse, DictionaryResult, Definition } from '../shared
 /** Regex to parse a CEDICT line: traditional simplified [pinyin] /def1/def2/ */
 const CEDICT_LINE_RE = /^([^\s]+?)\s+([^\s]+?)\s+\[(.*?)\]?\s*\/(.+)\//;
 
+export const ID = 'cedict';
+export const NAME = 'CC-CEDICT (Mandarin Chinese → English)';
+
 export class CedictDictionary implements Dictionary {
-    readonly id = 'cedict';
-    readonly name = 'CC-CEDICT';
+    readonly id = ID;
 
     wordDict: string;
     wordIndex: string;

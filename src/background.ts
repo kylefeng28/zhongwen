@@ -45,7 +45,7 @@
  */
 
 import { DictionaryManager } from './dictionaries/manager';
-import { getConfig } from './shared/config';
+import { getConfig, loadConfig } from './shared/config';
 import type { ZhongwenConfig, MultiDictSearchResult, WordListEntry } from './shared/types';
 
 let config: ZhongwenConfig = getConfig();
@@ -287,6 +287,7 @@ chrome.runtime.onMessage.addListener(function (
 
 async function search(text: string): Promise<MultiDictSearchResult | null> {
     if (!dictManager.loaded) {
+			  await loadConfig();
         await dictManager.loadDictionaries(config.enabledDicts);
     }
 

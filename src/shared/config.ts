@@ -19,20 +19,25 @@ export const defaultConfig: ZhongwenConfig = {
 let config: ZhongwenConfig = { ...defaultConfig };
 
 export function loadConfig(callback = undefined) {
-    chrome.storage.local.get(null, (storedConfig: Record<string, unknown>) => {
-        if (storedConfig) {
-            Object.entries(storedConfig).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1]);
-            console.log('[Zhongwen] Config loaded from chrome.storage')
-        }
-        else {
-            console.log('[Zhongwen] No config saved in chrome.storage; using default config')
-        }
+    return new Promise((resolve) => {
+        chrome.storage.local.get(null, (storedConfig: Record<string, unknown>) => {
+            if (storedConfig) {
+                Object.entries(storedConfig).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1]);
+                console.log('[Zhongwen] Config loaded from chrome.storage')
+            }
+            else {
+                console.log('[Zhongwen] No config saved in chrome.storage; using default config')
+            }
 
-        if (callback) {
-            callback();
-        }
-    });
+            if (callback) {
+                callback();
+            }
+
+            resolve(config);
+        });
+    })
 }
+
 export function getConfig(): ZhongwenConfig {
     return config;
 }
