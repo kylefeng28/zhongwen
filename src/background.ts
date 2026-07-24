@@ -44,9 +44,11 @@
 
  */
 
-import { DictionaryManager, initDictManager } from './dictionaries/manager';
-import { defaultConfig } from './shared/config';
-import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
+import { DictionaryManager } from './dictionaries/manager';
+import { getConfig } from './shared/config';
+import type { ZhongwenConfig, MultiDictSearchResult, WordListEntry } from './shared/types';
+
+let config: ZhongwenConfig = getConfig();
 
 let dictManager = new DictionaryManager();
 
@@ -240,7 +242,7 @@ function disableAllTabs(): void {
 chrome.runtime.onMessage.addListener(function (
     message: { type: string; text?: string },
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: SearchResult | undefined) => void
+    sendResponse: (response?: MultiDictSearchResult | undefined) => void
 ): boolean | undefined {
 
     if (message.type === 'search') {
@@ -283,13 +285,24 @@ chrome.runtime.onMessage.addListener(function (
     return undefined;
 });
 
-async function search(text: string): Promise<SearchResult | null> {
-    if (!dictManager.dictionaries.length) {
-        await dictManager.loadDictionaries();
+async function search(text: string): Promise<MultiDictSearchResult | null> {
+    if (!dictManager.loaded) {
+        await dictManager.loadDictionaries(config.enabledDicts);
     }
 
     return dictManager.search(text);
 }
+
+// Rebuild the dictionary manager when dictionary-related settings change
+const DICT_CONFIG_KEYS = ['enabledDicts'];
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    const changedKeys = Object.keys(changes);
+    if (changedKeys.some(k => DICT_CONFIG_KEYS.includes(k))) {
+        console.log('[Zhongwen] Dictionary config changed, rebuilding manager...');
+        dictManager.deactivate();
+    }
+});
 
 chrome.tabs.onActivated.addListener((activeInfo: chrome.tabs.TabActiveInfo): void => {
 
@@ -364,7 +377,7 @@ chrome.runtime.onMessage.addListener(function (
 
             let wordList: WordListEntry[] = data.wordList || [];
 
-            let saveToWordList: string = data.saveToWordList || defaultConfig.saveToWordList;
+            let saveToWordList: string = data.saveToWordList || config.saveToWordList;
 
             for (let i in message.entries!) {
 

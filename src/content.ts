@@ -44,25 +44,20 @@
 
  */
 
-import { defaultConfig } from './shared/config';
+import { getConfig, loadConfig } from './shared/config';
 import { numericPinyin2Zhuyin } from './shared/zhuyin';
 import { ttsMandarin, ttsCantonese } from './tts';
-import type { ZhongwenConfig, SearchResult, SelectionEnd } from './shared/types';
+import type { ZhongwenConfig, MultiDictSearchResult, DictionaryResult, SelectionEnd } from './shared/types';
 
-let config: ZhongwenConfig = { ...defaultConfig };
-
-chrome.storage.local.get(null, (storedConfig: Record<string, unknown>) => {
-    if (storedConfig) {
-        Object.entries(storedConfig).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1]);
-    }
-});
+let config: ZhongwenConfig = getConfig();
+loadConfig();
 
 chrome.storage.onChanged.addListener((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
 
     if (areaName !== 'local') return;
 
     // format: {"background":{"newValue":"lightblue","oldValue":"blue"}, "toneColors":{"newValue":false,"oldValue":true}}
-    Object.entries(changes).forEach(e => (config as unknown as Record<string, unknown>)[e[0]] = e[1].newValue);
+    loadConfig();
 });
 
 let savedTarget: EventTarget | null = null;
@@ -89,7 +84,7 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 
 let altView: number = 0;
 
-let savedSearchResults: string[][] & { grammar?: SearchResult['grammar']; vocab?: SearchResult['vocab'] } = [];
+let savedSearchResults: string[][] & { grammar?: MultiDictSearchResult['grammar']; vocab?: MultiDictSearchResult['vocab'] } = [];
 
 let savedSelStartOffset: number = 0;
 
@@ -576,7 +571,7 @@ function triggerSearch(): number {
     return 0;
 }
 
-function processSearchResult(result: SearchResult | null): void {
+function processSearchResult(result: MultiDictSearchResult | null): void {
 
     let selStartOffset: number = savedSelStartOffset;
     let selEndList: SelectionEnd[] = savedSelEndList;
@@ -911,66 +906,50 @@ function copyToClipboard(data: string): void {
     });
 }
 
-function makeHtml(result: SearchResult, showToneColors: boolean): string {
+function makeHtml(result: MultiDictSearchResult, showToneColors: boolean): string {
 
-    let entry: RegExpMatchArray | null;
     let html = '';
     let texts: string[][] = [];
-    let hanziClass: string;
 
     if (result === null) return '';
 
-    for (let i = 0; i < result.data.length; ++i) {
-        entry = result.data[i][0].match(/^([^\s]+?)\s+([^\s]+?)\s+\[(.*?)\]?\s*\/(.+)\//);
-        if (!entry) continue;
+    for (let i = 0; i < result.results.length; ++i) {
+        const entry: DictionaryResult = result.results[i];
+
+        let hanziClass = 'w-hanzi';
+        if (config.fontSize === 'small') {
+            hanziClass += '-small';
+        }
 
         // Hanzi
-
         if (config.simpTrad === 'auto') {
-
-            let word: string = result.data[i][1];
-
-            hanziClass = 'w-hanzi';
-            if (config.fontSize === 'small') {
-                hanziClass += '-small';
-            }
-            html += '<span class="' + hanziClass + '">' + word + '</span>&nbsp;';
-
+            html += '<span class="' + hanziClass + '">' + entry.headword + '</span>&nbsp;';
         } else {
-
-            hanziClass = 'w-hanzi';
-            if (config.fontSize === 'small') {
-                hanziClass += '-small';
+            html += '<span class="' + hanziClass + '">' + entry.headword + '</span>&nbsp;';
+            if (entry.traditional && entry.traditional !== entry.headword) {
+                html += '<span class="' + hanziClass + '">' + entry.traditional + '</span>&nbsp;';
             }
-            html += '<span class="' + hanziClass + '">' + entry[2] + '</span>&nbsp;';
-            if (entry[1] !== entry[2]) {
-                html += '<span class="' + hanziClass + '">' + entry[1] + '</span>&nbsp;';
-            }
-
         }
 
         // Pinyin
-
         let pinyinClass = 'w-pinyin';
         if (config.fontSize === 'small') {
             pinyinClass += '-small';
         }
-        let p: [string, string, string] = pinyinAndZhuyin(entry[3], showToneColors, pinyinClass);
+        let p: [string, string, string] = pinyinAndZhuyin(entry.reading, showToneColors, pinyinClass);
         html += p[0];
 
         // Zhuyin
-
         if (config.zhuyin) {
             html += '<br>' + p[2];
         }
 
         // Definition
-
         let defClass = 'w-def';
         if (config.fontSize === 'small') {
             defClass += '-small';
         }
-        let translation: string = entry[4].replace(/\//g, ' ◆ ');
+        let translation: string = entry.definitions.map(d => d.def).join(' ◆ ');
         html += '<br><span class="' + defClass + '">' + translation + '</span><br>';
 
         let addFinalBr: boolean = false;
@@ -991,13 +970,15 @@ function makeHtml(result: SearchResult, showToneColors: boolean): string {
             html += '<br>';
         }
 
-        texts[i] = [entry[2], entry[1], p[1], translation, entry[3]];
+        // Store for clipboard: [simplified, traditional, pinyin_text, translation, raw_pinyin]
+        texts[i] = [entry.headword, entry.traditional || entry.headword, p[1], translation, entry.reading];
+
     }
     if (result.more) {
         html += '&hellip;<br/>';
     }
 
-    savedSearchResults = texts as string[][] & { grammar?: SearchResult['grammar']; vocab?: SearchResult['vocab'] };
+    savedSearchResults = texts as string[][] & { grammar?: MultiDictSearchResult['grammar']; vocab?: MultiDictSearchResult['vocab'] };
     savedSearchResults.grammar = result.grammar;
     savedSearchResults.vocab = result.vocab;
 

@@ -6,16 +6,12 @@
 
 // @ts-nocheck
 
-import { defaultConfig } from './shared/config';
+import { getConfig, loadConfig } from './shared/config';
 import type { ZhongwenConfig } from './shared/types';
 
-let config: ZhongwenConfig = { ...defaultConfig };
+let config: ZhongwenConfig = getConfig();
 
-chrome.storage.local.get(null, storedConfig => {
-    if (storedConfig) {
-        Object.entries(storedConfig).forEach(e => config[e[0]] = e[1]);
-    }
-
+loadConfig(() => {
     loadVals();
 });
 

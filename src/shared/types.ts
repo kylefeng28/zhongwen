@@ -13,6 +13,8 @@ export interface ZhongwenConfig {
     /** Format string for clipboard copy. Placeholders: {simplified}, {traditional}, {pinyin}, {definition} */
     clipboardFormat: string;
     ttsEnabled: boolean;
+    /** Enabled dictionaries in display order. IDs not in this list are disabled. */
+    enabledDicts: string[];
 }
 
 /** A dictionary entry tuple: [dentry, word] */
@@ -60,3 +62,42 @@ export type MessageType =
     | 'search'
     | 'open'
     | 'add';
+
+/** A single definition with optional part-of-speech and examples */
+export interface Definition {
+    def: string;
+    type?: string;  // part of speech
+    examples?: Array<{ text: string; reading?: string; translation?: string }>;
+}
+
+/** A normalized dictionary entry result usable by any dictionary source */
+export interface DictionaryResult {
+    /** The headword/entry that was matched */
+    headword: string;
+    /** Traditional characters (if applicable) */
+    traditional?: string;
+    /** The pronunciation/reading (pinyin, Tai-lo, jyutping, etc.) */
+    reading: string;
+    /** List of definitions */
+    definitions: Definition[];
+    /** Which dictionary this came from */
+    source: string;
+    /** Reading type label (e.g. '白', '文', '替' for Taigi heteronyms) */
+    readingType?: string;
+}
+
+/** Response from a single dictionary search */
+export interface DictSearchResponse {
+    matchLen: number;
+    entries: DictionaryResult[];
+    more?: boolean;
+}
+
+/** Aggregated search results from one or more dictionaries */
+export interface MultiDictSearchResult {
+    matchLen: number;
+    results: DictionaryResult[];
+    more?: boolean;
+    grammar?: { keyword: string; index: number };
+    vocab?: { keyword: string; index: number };
+}

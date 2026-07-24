@@ -1,4 +1,4 @@
-import type { DictionaryResult } from '../shared/types';
+import type { DictSearchResponse } from '../shared/types';
 
 /**
  * Abstract interface for a dictionary source.
@@ -18,5 +18,10 @@ export interface Dictionary {
      * @param maxResults - Maximum number of results to return
      * @returns Search response, or null if no match found.
      */
-    search(text: string, maxResults?: number): DictionaryResult | null;
+    search(text: string, maxResults?: number): DictSearchResponse | null;
+}
+
+export interface DictionaryLoader {
+    loadDictionary(): Promise<Dictionary>;
+    refreshDictionary(): Promise<Dictionary>;
 }

@@ -46,9 +46,13 @@
 
 'use strict';
 
-import { SearchResult } from './shared/types';
+import type { Dictionary } from './dictionary';
+import type { DictSearchResponse, DictionaryResult, Definition } from '../shared/types';
 
-export class CedictDictionary {
+/** Regex to parse a CEDICT line: traditional simplified [pinyin] /def1/def2/ */
+const CEDICT_LINE_RE = /^([^\s]+?)\s+([^\s]+?)\s+\[(.*?)\]?\s*\/(.+)\//;
+
+export class CedictDictionary implements Dictionary {
     readonly id = 'cedict';
     readonly name = 'CC-CEDICT';
 
@@ -96,15 +100,15 @@ export class CedictDictionary {
         return this.vocabKeywords[keyword];
     }
 
-    search(word: string, maxResults?: number = 7): SearchResult | null {
-
-        let entry: Partial<SearchResult> & Pick<SearchResult, 'data'> = { data: [] };
-
+    search(text: string, maxResults: number = 7): DictSearchResponse | null {
+        let word = text;
         let dict = this.wordDict;
         let index = this.wordIndex;
 
+        let data: [string, string][] = [];
         let count = 0;
         let maxLen = 0;
+        let more = false;
 
         WHILE:
             while (word.length > 0) {
@@ -114,6 +118,7 @@ export class CedictDictionary {
                     let findResult = CedictDictionary.find(word + ',', index);
                     if (!findResult) {
                         this.cache[word] = [];
+                        word = word.substr(0, word.length - 1);
                         continue;
                     }
                     ix = findResult.split(',');
@@ -126,7 +131,7 @@ export class CedictDictionary {
                     let dentry = dict.substring(offset, dict.indexOf('\n', offset));
 
                     if (count >= maxResults) {
-                        entry.more = 1;
+                        more = true;
                         break WHILE;
                     }
 
@@ -135,17 +140,42 @@ export class CedictDictionary {
                         maxLen = word.length;
                     }
 
-                    entry.data.push([dentry, word]);
+                    data.push([dentry, word]);
                 }
 
                 word = word.substr(0, word.length - 1);
             }
 
-        if (entry.data.length === 0) {
+        if (data.length === 0) {
             return null;
         }
 
-        entry.matchLen = maxLen;
-        return entry as SearchResult;
+        // Convert raw CEDICT lines to normalized DictionaryResult entries
+        const entries: DictionaryResult[] = [];
+        for (const [line] of data) {
+            const parsed = this.parseLine(line);
+            if (parsed) entries.push(parsed);
+        }
+
+        return { matchLen: maxLen, entries, more };
+    }
+
+    /** Parse a raw CEDICT line into a normalized DictionaryResult */
+    private parseLine(line: string): DictionaryResult | null {
+        const match = line.match(CEDICT_LINE_RE);
+        if (!match) return null;
+
+        const [, traditional, simplified, pinyin, rawDefs] = match;
+
+        // Split definitions on '/' and create Definition objects
+        const definitions: Definition[] = rawDefs.split('/').map(def => ({ def }));
+
+        return {
+            headword: simplified,
+            traditional: traditional !== simplified ? traditional : undefined,
+            reading: pinyin,
+            definitions,
+            source: 'cedict',
+        };
     }
 }

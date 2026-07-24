@@ -11,6 +11,7 @@
  */
 
 import { CedictDictionary } from './cedict';
+import type { DictionaryLoader } from './dictionary';
 
 const CEDICT_URL = 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz';
 const DB_NAME = 'zhongwen-dict';
@@ -173,7 +174,7 @@ async function loadGrammarVocabKeywords(): Promise<[Record<string, boolean>, Rec
 }
 
 // --- Main loader ---
-export class CedictLoader {
+export class CedictLoader implements DictionaryLoader {
     async loadDictionary(): Promise<CedictDictionary> {
         const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
         return new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
