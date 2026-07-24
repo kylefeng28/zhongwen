@@ -270,7 +270,7 @@ chrome.runtime.onMessage.addListener(function (
     }
 
     if (message.type === 'refreshDict') {
-        dictManager.refreshDictionary().then(() =>
+        dictManager.refreshDictionaries().then(() =>
             dictManager.getDictStatus().then(status => {
                 sendResponse({ success: true, status });
             }).catch(err => {
@@ -284,32 +284,11 @@ chrome.runtime.onMessage.addListener(function (
 });
 
 async function search(text: string): Promise<SearchResult | null> {
-    if (!dictManager.cedict) {
-        await dictManager.loadDictionary();
+    if (!dictManager.dictionaries.length) {
+        await dictManager.loadDictionaries();
     }
 
-    return lookup(dictManager, text);
-}
-
-function lookup(dictManager: DictionaryManager, text: string): SearchResult | null {
-
-    let entry = dictManager.cedict.wordSearch(text);
-
-    if (entry) {
-        for (let i = 0; i < entry.data.length; i++) {
-            let word: string = entry.data[i][1];
-            if (dictManager.cedict.hasGrammarKeyword(word) && (entry.matchLen === word.length)) {
-                // the final index should be the last one with the maximum length
-                entry.grammar = { keyword: word, index: i };
-            }
-            if (dictManager.cedict.hasVocabKeyword(word) && (entry.matchLen === word.length)) {
-                // the final index should be the last one with the maximum length
-                entry.vocab = { keyword: word, index: i };
-            }
-        }
-    }
-
-    return entry;
+    return dictManager.search(text);
 }
 
 chrome.tabs.onActivated.addListener((activeInfo: chrome.tabs.TabActiveInfo): void => {

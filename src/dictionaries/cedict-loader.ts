@@ -10,6 +10,8 @@
  * 5. User can manually trigger a refresh from the options page.
  */
 
+import { CedictDictionary } from './cedict';
+
 const CEDICT_URL = 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz';
 const DB_NAME = 'zhongwen-dict';
 const DB_VERSION = 1;
@@ -163,7 +165,7 @@ async function loadBundledDictData(): Promise<{ wordDict: string; wordIndex: str
 }
 
 // Load grammar/vocab keywords from bundled data
-export async function loadGrammarVocabKeywords(): Promise<[Record<string, boolean>, Record<string, boolean>]> {
+async function loadGrammarVocabKeywords(): Promise<[Record<string, boolean>, Record<string, boolean>]> {
     return await Promise.all([
         fetch(chrome.runtime.getURL('data/grammarKeywordsMin.json')).then(r => r.json()),
         fetch(chrome.runtime.getURL('data/vocabularyKeywordsMin.json')).then(r => r.json()),
@@ -171,6 +173,17 @@ export async function loadGrammarVocabKeywords(): Promise<[Record<string, boolea
 }
 
 // --- Main loader ---
+export class CedictLoader {
+    async loadDictionary(): Promise<CedictDictionary> {
+        const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
+        return new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+    }
+
+    async refreshDictionary(): Promise<CedictDictionary> {
+        const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await refreshDictData();
+        return new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+    }
+}
 
 /**
  * Returns status information about the cached dictionary.
@@ -206,7 +219,7 @@ export async function getDictStatus(): Promise<DictStatus> {
  * and stores the result in IndexedDB. Returns the new dict data.
  * Throws if download fails.
  */
-export async function refreshDictData(): Promise<DictData> {
+async function refreshDictData(): Promise<DictData> {
     logMessage('Downloading latest CEDICT from MDBG...');
     const wordDict = await downloadCEDICT();
 
@@ -233,7 +246,7 @@ export async function refreshDictData(): Promise<DictData> {
  * downloading fresh data from MDBG when needed, and falling back to the
  * bundled extension data if all else fails.
  */
-export async function loadDictData(): Promise<DictData> {
+async function loadDictData(): Promise<DictData> {
     let wordDict: string;
     let wordIndex: string;
 

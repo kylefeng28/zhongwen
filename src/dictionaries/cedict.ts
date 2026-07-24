@@ -49,6 +49,8 @@
 import { SearchResult } from './shared/types';
 
 export class CedictDictionary {
+    readonly id = 'cedict';
+    readonly name = 'CC-CEDICT';
 
     wordDict: string;
     wordIndex: string;
@@ -94,14 +96,12 @@ export class CedictDictionary {
         return this.vocabKeywords[keyword];
     }
 
-    wordSearch(word: string, max?: number): SearchResult | null {
+    search(word: string, maxResults?: number = 7): SearchResult | null {
 
         let entry: Partial<SearchResult> & Pick<SearchResult, 'data'> = { data: [] };
 
         let dict = this.wordDict;
         let index = this.wordIndex;
-
-        let maxTrim = max || 7;
 
         let count = 0;
         let maxLen = 0;
@@ -125,7 +125,7 @@ export class CedictDictionary {
 
                     let dentry = dict.substring(offset, dict.indexOf('\n', offset));
 
-                    if (count >= maxTrim) {
+                    if (count >= maxResults) {
                         entry.more = 1;
                         break WHILE;
                     }
