@@ -1,14 +1,26 @@
 import { CedictDictionary } from './cedict';
-import { loadDictData, refreshDictData } from './cedict-loader';
-export { getDictStatus } from './cedict-loader.ts';
+import { loadDictData, refreshDictData, getDictStatus  } from './cedict-loader';
 
-export async function loadDictionary(): Promise<CedictDictionary> {
-    const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
-    return new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
-}
+export class DictionaryManager {
+    public cedict: CedictDictionary = null;
 
-export async function refreshDictionary(): Promise<CedictDictionary> {
-    // Return a new dictionary instance with fresh data
-    const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await refreshDictData();
-    return new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+    deactivate(): void {
+        this.cedict = null;
+    }
+
+    async loadDictionary(): Promise<void> {
+        const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await loadDictData();
+        this.cedict = new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+    }
+
+    async refreshDictionary(): Promise<void> {
+        // Replace the dictionary instance with the refreshed instance
+        const { wordDict, wordIndex, grammarKeywords, vocabKeywords } = await refreshDictData();
+        this.cedict = new CedictDictionary(wordDict, wordIndex, grammarKeywords, vocabKeywords);
+    }
+
+    async getDictStatus(): Promise<DictStatus> {
+        return await getDictStatus();
+    }
+
 }

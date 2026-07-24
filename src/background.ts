@@ -44,11 +44,11 @@
 
  */
 
-import { loadDictionary, refreshDictionary, getDictStatus } from './dictionaries/manager';
+import { DictionaryManager, initDictManager } from './dictionaries/manager';
 import { defaultConfig } from './shared/config';
 import type { ZhongwenConfig, SearchResult, WordListEntry } from './shared/types';
 
-let dict: CedictDictionary | undefined;
+let dictManager = new DictionaryManager();
 
 chrome.runtime.onInstalled.addListener((): void => {
 
@@ -200,7 +200,7 @@ function deactivateExtension(): void {
 
     chrome.storage.local.set({isActive: false});
 
-    dict = undefined;
+    dictManager.deactivate();
 
     showInactiveBadge();
 
@@ -263,57 +263,46 @@ chrome.runtime.onMessage.addListener(function (
 ): boolean | undefined {
 
     if (message.type === 'getDictStatus') {
-        getDictStatus().then(status => {
+        dictManager.getDictStatus().then(status => {
             sendResponse(status);
         });
         return true;
     }
 
     if (message.type === 'refreshDict') {
-        refreshDictionary().then(refreshedDict => {
-            // Replace the dictionary instance with the refreshed instance and return updated status
-            dict = refreshedDict;
-            return getDictStatus();
-        }).then(status => {
-            sendResponse({ success: true, status });
-        }).catch(err => {
-            sendResponse({ success: false, error: String(err) });
-        });
+        dictManager.refreshDictionary().then(() =>
+            dictManager.getDictStatus().then(status => {
+                sendResponse({ success: true, status });
+            }).catch(err => {
+                sendResponse({ success: false, error: String(err) });
+            })
+        );
         return true;
     }
 
     return undefined;
 });
 
-function search(text: string): Promise<SearchResult | null> {
-
-    if (!dict) {
-        return loadDictionary().then(d => {
-
-            dict = d;
-
-            return lookup(dict, text);
-
-        });
-    } else {
-        let entry = lookup(dict, text);
-
-        return Promise.resolve(entry);
+async function search(text: string): Promise<SearchResult | null> {
+    if (!dictManager.cedict) {
+        await dictManager.loadDictionary();
     }
+
+    return lookup(dictManager, text);
 }
 
-function lookup(dictionary: CedictDictionary, text: string): SearchResult | null {
+function lookup(dictManager: DictionaryManager, text: string): SearchResult | null {
 
-    let entry = dictionary.wordSearch(text);
+    let entry = dictManager.cedict.wordSearch(text);
 
     if (entry) {
         for (let i = 0; i < entry.data.length; i++) {
             let word: string = entry.data[i][1];
-            if (dictionary.hasGrammarKeyword(word) && (entry.matchLen === word.length)) {
+            if (dictManager.cedict.hasGrammarKeyword(word) && (entry.matchLen === word.length)) {
                 // the final index should be the last one with the maximum length
                 entry.grammar = { keyword: word, index: i };
             }
-            if (dictionary.hasVocabKeyword(word) && (entry.matchLen === word.length)) {
+            if (dictManager.cedict.hasVocabKeyword(word) && (entry.matchLen === word.length)) {
                 // the final index should be the last one with the maximum length
                 entry.vocab = { keyword: word, index: i };
             }
